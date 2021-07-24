@@ -151,6 +151,7 @@ namespace StarterAssets
 
 		private void CameraRotation()
 		{
+			Debug.Log(_input.look);
 			// if there is an input and camera position is not fixed
 			if (_input.look.sqrMagnitude >= _threshold && !LockCameraPosition)
 			{
