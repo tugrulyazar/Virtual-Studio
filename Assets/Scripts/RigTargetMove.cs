@@ -55,7 +55,6 @@ public class RigTargetMove : MonoBehaviour
         // Check if target is behind the player
         heading = transform.position - playerPos.transform.position;
         float angle = Vector3.Angle(heading, playerPos.transform.forward);
-        Debug.Log(angle);
 
         // If the target is behind, decrease constraint weight over time
         if (angle > 100)
