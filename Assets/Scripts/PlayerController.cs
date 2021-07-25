@@ -402,7 +402,7 @@ public class PlayerController : MonoBehaviour
         {
             FPPCamera.SetActive(false);
             TPPCamera.SetActive(true);
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(0.2f);
             ModelGeometry.SetActive(true);
             
         }
@@ -410,7 +410,7 @@ public class PlayerController : MonoBehaviour
         {
             FPPCamera.SetActive(true);
             TPPCamera.SetActive(false);
-            yield return new WaitForSeconds(1.5f);
+            yield return new WaitForSeconds(0.8f);
             ModelGeometry.SetActive(false);
         }
         yield return new WaitForSeconds(1.0f);
