@@ -2180,8 +2180,8 @@ MonoBehaviour:
   head: {fileID: 7607922761674634523}
   playerPos: {fileID: 1218880895}
   headRig: {fileID: 1709443312}
-  handRig: {fileID: 1407519215}
-  notLooking: 0
+  rightHandRig: {fileID: 1407519215}
+  leftHandRig: {fileID: 132754170}
 --- !u!1 &1482251642
 GameObject:
   m_ObjectHideFlags: 0
