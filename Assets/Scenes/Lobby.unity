@@ -2175,10 +2175,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79a5e42ae4e7d084dbb298f390fd8748, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  camDistance: 4
+  targetDistance: 4
   frontAngle: 105
+  raycastDistance: 120
   playerHead: {fileID: 7607922761674634523}
   playerPos: {fileID: 1218880895}
+  tagSphere: {fileID: 2134720236750715303, guid: 6ce6a0c7a8c116f40ba25abadc867ed0, type: 3}
   headRig: {fileID: 1709443312}
   rightHandRig: {fileID: 1407519215}
   leftHandRig: {fileID: 132754170}

@@ -12,12 +12,18 @@ public class RigTargetMove : MonoBehaviour
     [SerializeField]
     [Range(30f, 180f)]
     private float frontAngle = 120;
+    [SerializeField]
+    [Range(5, 100)]
+    private float raycastDistance = 20;
 
     [SerializeField]
     private GameObject playerHead;
 
     [SerializeField]
     private GameObject playerPos;
+
+    [SerializeField]
+    private GameObject tagSphere;
 
     [SerializeField]
     private Rig headRig;
@@ -43,9 +49,10 @@ public class RigTargetMove : MonoBehaviour
     private float originalFov;
     private float zoomDistance = 1;
     private float originalDistance;
-    private Vector3 cameraOffset;
 
     private RaycastHit hit;
+
+    GameObject mySphere;
 
     private void Awake()
     {
@@ -85,6 +92,7 @@ public class RigTargetMove : MonoBehaviour
         // TODO: Carry this over to camera switch script
         if (Input.GetKeyDown(KeyCode.F)) StartCoroutine(getActiveCamera());
 
+        // TODO: improve code to release previous hand
         // Switch hands based on player side
         // switch (angleDir)
         // {
@@ -97,17 +105,32 @@ public class RigTargetMove : MonoBehaviour
         // }
 
         // Right hand point and camera zoom
-        if (Input.GetKey(KeyCode.Mouse0) && !notLooking)
+        if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
         {
             activateRig(rightHandRig, 3);
             zoomIn();
+
             // Move the pointing to the center of the screen
-            if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, 20))
+            if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance))
             {
-                // TODO: lerp to this pos
-                transform.position = hit.point;
-                // TODO: instantiate sphere on mouse1, if sphere exists, move sphere
+                transform.position = Vector3.Lerp(transform.position, hit.point, Time.deltaTime * transitionRate);
+
+                // Place sphere at the pointed location
+                if (Input.GetKeyDown(KeyCode.Mouse0))
+                {
+                    if (!mySphere)
+                    {
+                        mySphere = Instantiate(tagSphere);
+                        mySphere.transform.position = hit.point;
+                    }
+                    else
+                    {
+                        mySphere.transform.position = hit.point;
+                    }
+                }
             }
+
+
         }
         else if (rightHandRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
         {
@@ -124,14 +147,10 @@ public class RigTargetMove : MonoBehaviour
         camTPF = activeCam.GetCinemachineComponent<Cinemachine3rdPersonFollow>();
         originalFov = activeCam.m_Lens.FieldOfView;
         originalDistance = camTPF.CameraDistance;
-        cameraOffset = new Vector3(camTPF.ShoulderOffset.x * camTPF.CameraSide, 0, 0);
-        
-        
+
         // Temp camera values
         cameraFov = originalFov;
         cameraDistance = originalDistance;
-
-        
     }
 
     private void activateRig(Rig rig, float rate)
