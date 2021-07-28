@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 using Cinemachine;
+using UnityEngine.UI;
 
 public class RigTargetMove : MonoBehaviour
 {
@@ -24,6 +25,9 @@ public class RigTargetMove : MonoBehaviour
 
     [SerializeField]
     private GameObject tagSphere;
+
+    [SerializeField]
+    private GameObject crosshair;
 
     [SerializeField]
     private Rig headRig;
@@ -51,7 +55,6 @@ public class RigTargetMove : MonoBehaviour
     private float originalDistance;
 
     private RaycastHit hit;
-
     GameObject mySphere;
 
     private void Awake()
@@ -159,7 +162,7 @@ public class RigTargetMove : MonoBehaviour
         {
             // Lerp rig constraint weights
             rig.weight = (rig.weight > 0.99) ? 1 : Mathf.Lerp(rig.weight, 1, Time.deltaTime * transitionRate * rate);
-        }
+        }   
     }
 
     private void deactivateRig(Rig rig, float rate)
@@ -173,6 +176,12 @@ public class RigTargetMove : MonoBehaviour
 
     private void zoomIn()
     {
+        // Enable crosshair
+        if(!crosshair.activeSelf)
+        {
+            crosshair.SetActive(true);
+        }
+
         if (cameraFov != zoomFov && cameraDistance != zoomDistance)
         {
             // Lerp camera fov to zoom fov
@@ -187,6 +196,12 @@ public class RigTargetMove : MonoBehaviour
 
     private void zoomOut()
     {
+        // Disable crosshair
+        if (crosshair.activeSelf)
+        {
+            crosshair.SetActive(false);
+        }
+
         if (cameraFov != originalFov && cameraDistance != originalDistance)
         {
             // Lerp camera fov to original
