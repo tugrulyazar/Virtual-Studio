@@ -2175,9 +2175,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79a5e42ae4e7d084dbb298f390fd8748, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  distance: 2
+  camDistance: 4
   frontAngle: 105
-  head: {fileID: 7607922761674634523}
+  playerHead: {fileID: 7607922761674634523}
   playerPos: {fileID: 1218880895}
   headRig: {fileID: 1709443312}
   rightHandRig: {fileID: 1407519215}
@@ -4288,6 +4288,8 @@ MonoBehaviour:
   Gravity: -15
   JumpTimeout: 0.5
   FallTimeout: 0.2
+  MeshRenderer: {fileID: 3986945510606048446}
+  Grounded: 1
   GroundedOffset: -0.14
   GroundedRadius: 0.28
   GroundLayers:
@@ -4295,8 +4297,6 @@ MonoBehaviour:
     m_Bits: 1
   TPPCamera: {fileID: 7369559212251348425}
   FPPCamera: {fileID: 1790846300596152842}
-  ModelGeometry: {fileID: 5745070037729509746}
-  cameraMode: 0
   CinemachineCameraTarget: {fileID: 667237885853760529}
   TopClamp: 80
   BottomClamp: -40

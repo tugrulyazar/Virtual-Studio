@@ -1,60 +1,74 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 public class PlayerController : MonoBehaviour
 {
     [Header("Player")]
     [SerializeField] // Move speed of the character in m/s
     private float MoveSpeed = 2.0f;
+
     [SerializeField] // Sprint speed of the character in m/s
     private float SprintSpeed = 5.335f;
+
+    [Space(10)]
     [SerializeField] // How fast the character turns to face movement direction
     [Range(0.0f, 0.3f)]
     private float RotationSmoothTime = 0.12f;
+
     [SerializeField] // Acceleration and deceleration
     private float SpeedChangeRate = 10.0f;
 
     [Space(10)]
     [SerializeField] // The height the player can jump
     private float JumpHeight = 1.2f;
+
     [SerializeField] // The character uses its own gravity value. The engine default is -9.81f
     private float Gravity = -15.0f;
 
-    [Space(10)]
     [SerializeField] // Time required to pass before being able to jump again. Set to 0f to instantly jump again
     private float JumpTimeout = 0.50f;
+
     [SerializeField] // Time required to pass before entering the fall state. Useful for walking down stairs
     private float FallTimeout = 0.15f;
 
+    [Space(10)]
+    [SerializeField] // Player model
+    private SkinnedMeshRenderer MeshRenderer;
+
     [Header("Player Grounded")]
-    [Tooltip("If the character is grounded or not. Not part of the CharacterController built in grounded check")]
+    [SerializeField] // If the character is grounded or not. Not part of the CharacterController built in grounded check
     private bool Grounded = true;
+
     [SerializeField] // Useful for rough ground
     private float GroundedOffset = -0.14f;
+
     [SerializeField] // The radius of the grounded check. Should match the radius of the CharacterController
     private float GroundedRadius = 0.28f;
+
     [SerializeField] // What layers the character uses as ground
     private LayerMask GroundLayers;
 
     [Header("Cinemachine")]
     [SerializeField] // Third person camera object
     private GameObject TPPCamera;
+
     [SerializeField] // First person camera object
     private GameObject FPPCamera;
-    [SerializeField] // Player model
-    private GameObject ModelGeometry;
-    [SerializeField] // Camera mode
-    private int cameraMode;
+
     [SerializeField] // The follow target set in the Cinemachine Virtual Camera that the camera will follow
     private GameObject CinemachineCameraTarget;
+
+    [Space(10)]
     [SerializeField] // How far in degrees can you move the camera up
     private float TopClamp = 70.0f;
+
     [SerializeField] // How far in degrees can you move the camera down
     private float BottomClamp = -30.0f;
+
     [SerializeField] // Additional degress to override the camera. Useful for fine tuning camera position when locked
     private float CameraAngleOverride = 0.0f;
+
     [SerializeField]  // For locking the camera position on all axis
     private bool LockCameraPosition = false;
 
@@ -68,28 +82,36 @@ public class PlayerController : MonoBehaviour
     private int animIDJump;
     private int animIDFreeFall;
     private int animIDMotionSpeed;
+    private int animIDisFlying;
+    private int animIDisWaving;
+    private int animIDisDancing;
 
-    // Input system declarations
-    PlayerInput input;
+    // Input system
+    private PlayerInput input;
 
-    Vector2 currentMovement;
-    Vector2 currentLook;
+    private Vector2 currentMovement;
+    private Vector2 currentLook;
 
-    bool movementPressed;
-    bool lookPressed;
-    bool runPressed;
-    bool jumpPressed;
-    bool camTogglePressed;
-    bool analogMovement;
+    private bool movementPressed;
+    private bool lookPressed;
+    private bool runPressed;
+    private bool jumpPressed;
+    private bool camTogglePressed;
+    private bool analogMovement;
+    private bool inAnimation = false;
 
     // Character controller
     private CharacterController controller;
 
     // Camera and cinemachine
     private Transform mainCamera;
+
     private float cinemachineTargetYaw;
     private float cinemachineTargetPitch;
+
+    private int cameraMode;
     private bool CameraCourutineInProgress;
+
 
     // Player
     private float speed;
@@ -98,6 +120,7 @@ public class PlayerController : MonoBehaviour
     private float rotationVelocity;
     private float verticalVelocity;
     private float terminalVelocity = 53.0f;
+    private float targetSpeed;
 
     // Timeout deltatime
     private float jumpTimeoutDelta;
@@ -109,8 +132,8 @@ public class PlayerController : MonoBehaviour
     private const float RotationSpeed = 1.0f;
 
     // Gizmo colors for editor
-    Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
-    Color transparentRed = new Color(1.0f, 0.0f, 0.0f, 0.35f);
+    private Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
+    private Color transparentRed = new Color(1.0f, 0.0f, 0.0f, 0.35f);
 
     private void Awake()
     {
@@ -169,6 +192,8 @@ public class PlayerController : MonoBehaviour
         GroundedCheck();
         JumpAndGravity();
         Move();
+
+        ControlAnimations();
         CameraToggle();
     }
 
@@ -177,7 +202,6 @@ public class PlayerController : MonoBehaviour
         CameraRotation();
     }
 
-
     private void AssignAnimationIDs()
     {
         animIDSpeed = Animator.StringToHash("Speed");
@@ -185,6 +209,9 @@ public class PlayerController : MonoBehaviour
         animIDJump = Animator.StringToHash("Jump");
         animIDFreeFall = Animator.StringToHash("FreeFall");
         animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
+        animIDisFlying = Animator.StringToHash("isFlying");
+        animIDisWaving = Animator.StringToHash("isWaving");
+        animIDisDancing = Animator.StringToHash("isDancing");
     }
 
     private void GroundedCheck()
@@ -221,7 +248,7 @@ public class PlayerController : MonoBehaviour
             }
 
             // Jump if ready to jump
-            if (jumpPressed && jumpTimeoutDelta <= 0.0f)
+            if (jumpPressed && jumpTimeoutDelta <= 0.0f && !inAnimation)
             {
                 // The square root of H * -2 * G = how much velocity needed to reach desired height
                 verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
@@ -269,7 +296,7 @@ public class PlayerController : MonoBehaviour
     private void Move()
     {
         // Set target speed based on move speed, sprint speed and if sprint is pressed
-        float targetSpeed = runPressed ? SprintSpeed : MoveSpeed;
+        targetSpeed = runPressed ? SprintSpeed : MoveSpeed;
 
         // If there is no input, set the target speed to 0
         if (currentMovement == Vector2.zero) targetSpeed = 0.0f;
@@ -304,7 +331,6 @@ public class PlayerController : MonoBehaviour
         // Normalize input direction
         Vector3 inputDirection = new Vector3(currentMovement.x, 0.0f, currentMovement.y).normalized;
 
-
         // Third person move
         // If there is a move input rotate player when the player is moving
         if (currentMovement != Vector2.zero)
@@ -321,7 +347,6 @@ public class PlayerController : MonoBehaviour
         // Move the player
         controller.Move(targetDirection.normalized * (speed * Time.deltaTime) + new Vector3(0.0f, verticalVelocity, 0.0f) * Time.deltaTime);
 
-
         //// First person move
         //if (_input.move != Vector2.zero)
         //{
@@ -329,7 +354,6 @@ public class PlayerController : MonoBehaviour
         //}
 
         //_controller.Move(inputDirection.normalized * (_speed * Time.deltaTime) + new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
-        
 
         // Update animator if using character
         if (hasAnimator)
@@ -376,9 +400,9 @@ public class PlayerController : MonoBehaviour
         //}
     }
 
-    // Toggle camera mode on key press, for how many ever camera modes there will be
     private void CameraToggle()
     {
+        // Toggle camera mode on key press, for how many ever camera modes there will be
         if (camTogglePressed && !CameraCourutineInProgress)
         {
             // Final camera mode index case
@@ -390,11 +414,10 @@ public class PlayerController : MonoBehaviour
             {
                 cameraMode += 1;
             }
-            StartCoroutine("CameraChange");
+            StartCoroutine(CameraChange());
         }
     }
 
-    // Camera modes manager
     private IEnumerator CameraChange()
     {
         CameraCourutineInProgress = true;
@@ -403,47 +426,120 @@ public class PlayerController : MonoBehaviour
             FPPCamera.SetActive(false);
             TPPCamera.SetActive(true);
             yield return new WaitForSeconds(0.2f);
-            ModelGeometry.SetActive(true);
-            
+            MeshRenderer.shadowCastingMode = ShadowCastingMode.On;
         }
-        if (cameraMode ==1)
+        if (cameraMode == 1)
         {
             FPPCamera.SetActive(true);
             TPPCamera.SetActive(false);
             yield return new WaitForSeconds(0.8f);
-            ModelGeometry.SetActive(false);
+            MeshRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
         }
         yield return new WaitForSeconds(1.0f);
         CameraCourutineInProgress = false;
     }
 
-    // Enable input when character is enabled
-    private void OnEnable()
+    private void ControlAnimations()
     {
-        input.Enable();
+        // Play animations, only if grounded and not already in animation
+        if (Grounded && !inAnimation)
+        {
+            // Wave animation one shot
+            if (Input.GetKeyDown(KeyCode.H))
+            {
+                StartCoroutine(OneShotAnimation(animIDisWaving));
+            }
+
+            // Dance animation loop start
+            if (Input.GetKeyDown(KeyCode.J))
+            {
+                StartLoopAnimation(animIDisDancing);
+            }
+        }
+
+        // Stop loop animations
+
+        // Dance animation loop stop
+        if (Input.GetKeyUp(KeyCode.J))
+        {
+            StartCoroutine(EndLoopAnimation(animIDisDancing));
+        }
     }
 
-    // Disable input when character is disabled
-    private void OnDisable()
+    private IEnumerator OneShotAnimation(int animID)
     {
-        input.Disable();
+        inAnimation = true;
+        // Disable movement while in animation
+        movementDisable();
+        // To register animation only once
+        animator.SetBool(animID, true);
+        yield return new WaitForEndOfFrame();
+        animator.SetBool(animID, false);
+        // Wait for the animation duration
+        yield return new WaitForSeconds(5); // TODO: need to get animation clip length
+        // Enable movement after animation
+        movementEnable();
+        inAnimation = false;
     }
 
-    // For clamping camera angle
+    private void StartLoopAnimation(int animID)
+    {
+        inAnimation = true;
+        movementDisable();
+        animator.SetBool(animID, true);
+    }
+
+    private IEnumerator EndLoopAnimation(int animID)
+    {
+        animator.SetBool(animIDisDancing, false);
+        yield return new WaitForSeconds(3);
+        movementEnable();
+        inAnimation = false;
+    }
+
+    private void movementDisable()
+    {
+        input.Player.Move.Disable();
+        input.Player.Jump.Disable();
+        // TODO: disable pointing
+        // TODO: disable head look
+    }
+
+    private void movementEnable()
+    {
+        input.Player.Move.Enable();
+        input.Player.Jump.Enable();
+        // TODO: enable pointing
+        // TODO: enable head look
+    }
     private static float ClampAngle(float lfAngle, float lfMin, float lfMax)
     {
+        // For clamping camera angle
         if (lfAngle < -360f) lfAngle += 360f;
         if (lfAngle > 360f) lfAngle -= 360f;
         return Mathf.Clamp(lfAngle, lfMin, lfMax);
     }
 
-    // Draw grounded gizmo
+    private void OnEnable()
+    {
+        // Enable input when character is enabled
+        input.Enable();
+    }
+
+    private void OnDisable()
+    {
+        // Disable input when character is disabled
+        input.Disable();
+    }
+
+
     private void OnDrawGizmosSelected()
     {
+        // Draw grounded gizmo
         if (Grounded) Gizmos.color = transparentGreen;
         else Gizmos.color = transparentRed;
 
-        // when selected, draw a gizmo in the position of, and matching radius of, the grounded collider
+        // When selected, draw a gizmo in the position of, and matching radius of, the grounded collider
         Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z), GroundedRadius);
     }
 }

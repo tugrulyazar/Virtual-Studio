@@ -7,14 +7,14 @@ using Cinemachine;
 public class RigTargetMove : MonoBehaviour
 {
     [SerializeField]
-    [Range(0f, 10f)]
-    private float distance;
+    [Range(1f, 10f)]
+    private float targetDistance = 4;
     [SerializeField]
     [Range(30f, 180f)]
     private float frontAngle = 120;
 
     [SerializeField]
-    private GameObject head;
+    private GameObject playerHead;
 
     [SerializeField]
     private GameObject playerPos;
@@ -35,11 +35,17 @@ public class RigTargetMove : MonoBehaviour
     private Vector3 heading;
 
     private CinemachineBrain cinemachineBrain;
-    CinemachineVirtualCamera activeCam;
+    private CinemachineVirtualCamera activeCam;
+    private Cinemachine3rdPersonFollow camTPF;
     private float cameraFov;
-    private float zoomFov = 20;
-    private float originalCameraFov;
+    private float cameraDistance;
+    private float zoomFov = 30;
+    private float originalFov;
+    private float zoomDistance = 1;
+    private float originalDistance;
+    private Vector3 cameraOffset;
 
+    private RaycastHit hit;
 
     private void Awake()
     {
@@ -56,7 +62,7 @@ public class RigTargetMove : MonoBehaviour
     void Update()
     {
         // Move target according to camera
-        transform.position = head.transform.position + mainCamera.forward * distance;
+        transform.position = playerHead.transform.position + mainCamera.forward * targetDistance;
 
         // Get the angle between the camera and player heading and target position in left/right
         heading = transform.position - playerPos.transform.position;
@@ -67,39 +73,45 @@ public class RigTargetMove : MonoBehaviour
         notLooking = (angle > frontAngle) ? true : false;
 
         // Decrease head constraint weights over time, disable unnecessary infinite lerping
-        if (notLooking && headRig.weight != 0)
+        if (notLooking)
         {
-            headRig.weight = (headRig.weight < 0.01) ? 0 : Mathf.Lerp(headRig.weight, 0, Time.deltaTime * transitionRate);
+            deactivateRig(headRig, 0.5f);
         }
-        else if (!notLooking && headRig.weight != 1)
+        else if (!notLooking)
         {
-            headRig.weight = (headRig.weight > 0.99) ? 1 : Mathf.Lerp(headRig.weight, 1, Time.deltaTime * transitionRate);
+            activateRig(headRig, 1);
         }
 
         // TODO: Carry this over to camera switch script
         if (Input.GetKeyDown(KeyCode.F)) StartCoroutine(getActiveCamera());
 
         // Switch hands based on player side
-        switch (angleDir)
-        {
-            case 1:
-                handRig = leftHandRig;
-                break;
-            case -1:
-                handRig = rightHandRig;
-                break;
-        }
+        // switch (angleDir)
+        // {
+        //     case 1:
+        //         handRig = leftHandRig;
+        //         break;
+        //     case -1:
+        //         handRig = rightHandRig;
+        //         break;
+        // }
 
-        // KEEP!!!
         // Right hand point and camera zoom
         if (Input.GetKey(KeyCode.Mouse0) && !notLooking)
         {
-            raiseHand(rightHandRig);
+            activateRig(rightHandRig, 3);
             zoomIn();
+            // Move the pointing to the center of the screen
+            if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, 20))
+            {
+                // TODO: lerp to this pos
+                transform.position = hit.point;
+                // TODO: instantiate sphere on mouse1, if sphere exists, move sphere
+            }
         }
-        else if (rightHandRig.weight != 0 && cameraFov != originalCameraFov)
+        else if (rightHandRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
         {
-            lowerHand(rightHandRig);
+            deactivateRig(rightHandRig, 4);
             zoomOut();
         }
     }
@@ -109,45 +121,62 @@ public class RigTargetMove : MonoBehaviour
     {
         yield return null;
         activeCam = cinemachineBrain.ActiveVirtualCamera as CinemachineVirtualCamera;
-        originalCameraFov = activeCam.m_Lens.FieldOfView;
-        // Temp camera fov
-        cameraFov = originalCameraFov;
+        camTPF = activeCam.GetCinemachineComponent<Cinemachine3rdPersonFollow>();
+        originalFov = activeCam.m_Lens.FieldOfView;
+        originalDistance = camTPF.CameraDistance;
+        cameraOffset = new Vector3(camTPF.ShoulderOffset.x * camTPF.CameraSide, 0, 0);
+        
+        
+        // Temp camera values
+        cameraFov = originalFov;
+        cameraDistance = originalDistance;
+
+        
     }
 
-    private void raiseHand(Rig rig)
+    private void activateRig(Rig rig, float rate)
     {
         if (rig.weight != 1)
         {
-            // Lerp hand constraint weights
-            rig.weight = (rig.weight > 0.99) ? 1 : Mathf.Lerp(rig.weight, 1, Time.deltaTime * transitionRate * 3);
+            // Lerp rig constraint weights
+            rig.weight = (rig.weight > 0.99) ? 1 : Mathf.Lerp(rig.weight, 1, Time.deltaTime * transitionRate * rate);
         }
     }
 
-    private void lowerHand(Rig rig)
+    private void deactivateRig(Rig rig, float rate)
     {
         if (rig.weight != 0)
         {
-            // Lerp hand constraint weights
-            rig.weight = (rig.weight < 0.01) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * transitionRate * 4);
+            // Lerp rig constraint weights
+            rig.weight = (rig.weight < 0.01) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * transitionRate * rate);
         }
     }
+
     private void zoomIn()
     {
-        if (cameraFov != zoomFov)
+        if (cameraFov != zoomFov && cameraDistance != zoomDistance)
         {
             // Lerp camera fov to zoom fov
             cameraFov = (cameraFov < zoomFov + 0.1f) ? zoomFov : Mathf.Lerp(cameraFov, zoomFov, Time.deltaTime * transitionRate * 2);
             activeCam.m_Lens.FieldOfView = cameraFov;
+
+            // Lerp camera distance to zoom distance
+            cameraDistance = (cameraDistance < zoomDistance + 0.1f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * transitionRate * 2);
+            camTPF.CameraDistance = cameraDistance;
         }
     }
 
     private void zoomOut()
     {
-        if (cameraFov != originalCameraFov)
+        if (cameraFov != originalFov && cameraDistance != originalDistance)
         {
             // Lerp camera fov to original
-            cameraFov = (cameraFov > originalCameraFov - 0.1f) ? originalCameraFov : Mathf.Lerp(cameraFov, originalCameraFov, Time.deltaTime * transitionRate * 2);
+            cameraFov = (cameraFov > originalFov - 0.1f) ? originalFov : Mathf.Lerp(cameraFov, originalFov, Time.deltaTime * transitionRate * 2);
             activeCam.m_Lens.FieldOfView = cameraFov;
+
+            // Lerp camera distance to original
+            cameraDistance = (cameraDistance > originalDistance - 0.1f) ? originalDistance : Mathf.Lerp(cameraDistance, originalDistance, Time.deltaTime * transitionRate * 2);
+            camTPF.CameraDistance = cameraDistance;
         }
     }
 
