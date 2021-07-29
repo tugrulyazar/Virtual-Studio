@@ -150,6 +150,7 @@ public class PlayerController : MonoBehaviour
     private float transitionRate = 2.0f;
     private bool notLooking = false;
     private bool rotateInProgress = false;
+    private bool zoomedIn;
     private Vector3 heading;
     private float RotationSpeed = 1.0f;
     private const float lookTimeout = 3f;
@@ -565,7 +566,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // Shoulder toggle
-        if (Input.GetKeyDown(KeyCode.R) && !CameraCoroutineInProgress)
+        if (Input.GetKeyDown(KeyCode.R) && !CameraCoroutineInProgress && cameraMode == 0 && !zoomedIn)
         {
             StartCoroutine(ShoulderChange());
         }
@@ -645,6 +646,8 @@ public class PlayerController : MonoBehaviour
 
     private void ZoomIn()
     {
+        zoomedIn = true;
+
         // Enable crosshair
         if (!crosshair.activeSelf)
         {
@@ -669,12 +672,13 @@ public class PlayerController : MonoBehaviour
         if (cameraMode != 1)
         {
             if (camNoise.m_FrequencyGain != 0) camNoise.m_FrequencyGain = 0;
-        }
-
+        } 
     }
 
     private void ZoomOut()
     {
+        zoomedIn = false;
+
         // Disable crosshair
         if (crosshair.activeSelf)
         {
