@@ -217,7 +217,7 @@ public class PlayerController : MonoBehaviour
 
         // Get active cam
         cinemachineBrain = Camera.main.GetComponent<CinemachineBrain>();
-        StartCoroutine(getActiveCamera());
+        StartCoroutine(GetActiveCamera());
 
         // Reset timers on start
         jumpTimeoutDelta = JumpTimeout;
@@ -228,80 +228,11 @@ public class PlayerController : MonoBehaviour
     {
         GroundedCheck();
         JumpAndGravity();
-        Move();
-
-        // Simple move target according to camera while not validly aiming
-        if (!Input.GetKey(KeyCode.Mouse1) || !Physics.Raycast(mainCamera.position, mainCamera.forward, raycastDistance))
-        {
-            lookTarget.transform.position = playerHead.transform.position + mainCamera.forward * targetDistance;
-        }
-
-        // TODO: Move target funcs goes here
+        MovePlayer();
+        MoveLookTarget();
         CheckTargetingStatus();
         ManageHead();
-
-
-
-        // Hand point and camera zoom goes here
-        // ManagePointAndZoom();
-        if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
-        {
-            activateRig(rightHandRig, 3);
-            DisableCamToggle();
-            zoomIn();
-
-            // Move the pointing to the center of the screen
-            if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance))
-            {
-                lookTarget.transform.position = Vector3.Lerp(lookTarget.transform.position, hit.point, Time.deltaTime * transitionRate * 2);
-
-                // Place sphere at the pointed location
-                if (Input.GetKeyDown(KeyCode.Mouse0))
-                {
-                    if (!myTag)
-                    {
-                        myTag = Instantiate(tagObject);
-                        myTag.transform.position = hit.point;
-                    }
-                    else
-                    {
-                        myTag.transform.position = hit.point;
-                    }
-                }
-
-                if (Input.GetKeyDown(KeyCode.E))
-                {
-                    if (!hit.transform.CompareTag("PermObject"))
-                    {
-                        myPermTag = Instantiate(permObject);
-                        myPermTag.transform.position = hit.point;
-                    }
-                    else
-                    {
-                        Destroy(hit.transform.gameObject);
-                    }
-                }
-
-
-
-            }
-            // If you're not pointing to a valid location
-            else if (Input.GetKeyDown(KeyCode.Mouse0))
-            {
-                Destroy(myTag);
-            }
-
-
-        }
-        else if (rightHandRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
-        {
-            deactivateRig(rightHandRig, 4);
-            EnableCamToggle();
-            zoomOut();
-        }
-
-
-
+        ManagePointAndZoom();
         ControlAnimations();
         CameraToggle();
     }
@@ -402,7 +333,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void Move()
+    private void MovePlayer()
     {
         // Set target speed based on move speed, sprint speed and if sprint is pressed
         targetSpeed = runPressed ? SprintSpeed : MoveSpeed;
@@ -469,6 +400,89 @@ public class PlayerController : MonoBehaviour
         {
             animator.SetFloat(animIDSpeed, animationBlend);
             animator.SetFloat(animIDMotionSpeed, inputMagnitude);
+        }
+    }
+
+    private void MoveLookTarget()
+    {
+        // Simple move target according to camera while not validly aiming
+        if (!Input.GetKey(KeyCode.Mouse1) || !Physics.Raycast(mainCamera.position, mainCamera.forward, raycastDistance))
+        {
+            Vector3 prevPos = lookTarget.transform.position;
+            Vector3 nextPos = playerHead.transform.position + mainCamera.forward * targetDistance;
+
+            if (prevPos != nextPos)
+            {
+                prevPos = Vector3.Lerp(prevPos, nextPos, Time.deltaTime * transitionRate * 2);
+            }
+
+            lookTarget.transform.position = prevPos;
+        }
+    }
+
+    private void ManagePointAndZoom()
+    {
+        if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
+        {
+            ActivateRig(rightHandRig, 3);
+            DisableCamToggle();
+            ZoomIn();
+
+            // Move the pointing to the center of the screen
+            if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance))
+            {
+                lookTarget.transform.position = Vector3.Lerp(lookTarget.transform.position, hit.point, Time.deltaTime * transitionRate * 3);
+
+                // Place tag at pointed location
+                if (Input.GetKeyDown(KeyCode.Mouse0))
+                {
+                    if (!myTag)
+                    {
+                        myTag = Instantiate(tagObject);
+                        myTag.transform.position = hit.point;
+                    }
+                    else
+                    {
+                        myTag.transform.position = hit.point;
+                    }
+                }
+
+                // Place perm tag at pointed location
+                if (Input.GetKeyDown(KeyCode.E))
+                {
+                    if (!hit.transform.CompareTag("PermObject"))
+                    {
+                        myPermTag = Instantiate(permObject);
+                        myPermTag.transform.position = hit.point;
+                    }
+                    else
+                    {
+                        Destroy(hit.transform.gameObject);
+                    }
+                }
+
+            }
+            // If you're not clicking to a valid location
+            else if (Input.GetKeyDown(KeyCode.Mouse0))
+            {
+                Destroy(myTag);
+            }
+
+            if (Input.GetKeyDown(KeyCode.Mouse2))
+            {
+                GameObject[] permObjects = GameObject.FindGameObjectsWithTag("PermObject");
+                foreach (GameObject obj in permObjects)
+                {
+                    Destroy(obj);
+                }
+            }
+
+        }
+        else if (rightHandRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
+        {
+            DeactivateRig(rightHandRig, 4);
+            EnableCamToggle();
+            ZoomOut();
         }
     }
 
@@ -547,15 +561,15 @@ public class PlayerController : MonoBehaviour
         // Decrease head constraint weights over time, disable unnecessary infinite lerping
         if (notLooking)
         {
-            deactivateRig(headRig, 1);
+            DeactivateRig(headRig, 1);
         }
         else if (!notLooking)
         {
-            activateRig(headRig, 1);
+            ActivateRig(headRig, 1);
         }
     }
 
-    private void activateRig(Rig rig, float rate)
+    private void ActivateRig(Rig rig, float rate)
     {
         if (rig.weight != 1)
         {
@@ -564,7 +578,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void deactivateRig(Rig rig, float rate)
+    private void DeactivateRig(Rig rig, float rate)
     {
         if (rig.weight != 0)
         {
@@ -573,7 +587,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void zoomIn()
+    private void ZoomIn()
     {
         // Enable crosshair
         if (!crosshair.activeSelf)
@@ -602,7 +616,7 @@ public class PlayerController : MonoBehaviour
         camNoise.m_FrequencyGain = 0;
     }
 
-    private void zoomOut()
+    private void ZoomOut()
     {
         // Disable crosshair
         if (crosshair.activeSelf)
@@ -658,7 +672,7 @@ public class PlayerController : MonoBehaviour
         {
             FPPCamera.SetActive(false);
             TPPCamera.SetActive(true);
-            StartCoroutine(getActiveCamera());
+            StartCoroutine(GetActiveCamera());
             yield return new WaitForSeconds(0.2f);
             MeshRenderer.shadowCastingMode = ShadowCastingMode.On;
         }
@@ -666,7 +680,7 @@ public class PlayerController : MonoBehaviour
         {
             FPPCamera.SetActive(true);
             TPPCamera.SetActive(false);
-            StartCoroutine(getActiveCamera());
+            StartCoroutine(GetActiveCamera());
             yield return new WaitForSeconds(0.8f);
             MeshRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
         }
@@ -674,7 +688,7 @@ public class PlayerController : MonoBehaviour
         CameraCourutineInProgress = false;
     }
 
-    private IEnumerator getActiveCamera()
+    private IEnumerator GetActiveCamera()
     {
         yield return null;
         activeCam = cinemachineBrain.ActiveVirtualCamera as CinemachineVirtualCamera;
@@ -721,7 +735,7 @@ public class PlayerController : MonoBehaviour
         inAnimation = true;
 
         // Disable movement while in animation
-        movementDisable();
+        MovementDisable();
 
         // To register animation only once
         animator.SetBool(animID, true);
@@ -732,14 +746,14 @@ public class PlayerController : MonoBehaviour
         yield return new WaitForSeconds(4); // TODO: need to get animation clip length
 
         // Enable movement after animation
-        movementEnable();
+        MovementEnable();
         inAnimation = false;
     }
 
     private void StartLoopAnimation(int animID)
     {
         inAnimation = true;
-        movementDisable();
+        MovementDisable();
         animator.SetBool(animID, true);
     }
 
@@ -747,17 +761,17 @@ public class PlayerController : MonoBehaviour
     {
         animator.SetBool(animIDisDancing, false);
         yield return new WaitForSeconds(3);
-        movementEnable();
+        MovementEnable();
         inAnimation = false;
     }
 
-    private void movementDisable()
+    private void MovementDisable()
     {
         input.Player.Move.Disable();
         input.Player.Jump.Disable();
     }
 
-    private void movementEnable()
+    private void MovementEnable()
     {
         input.Player.Move.Enable();
         input.Player.Jump.Enable();
