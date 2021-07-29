@@ -138,6 +138,7 @@ public class PlayerController : MonoBehaviour
     // Head look and zoom
     private float transitionRate = 2.0f;
     private bool notLooking = false;
+    private bool rotateInProgress = false;
     private Vector3 heading;
     private CinemachineBrain cinemachineBrain;
     private CinemachineVirtualCamera activeCam;
@@ -153,6 +154,9 @@ public class PlayerController : MonoBehaviour
     private RaycastHit hit;
     GameObject myTag;
     GameObject myPermTag;
+
+    private const float lookTimeout = 3f;
+    private float lookTimeoutDelta;
 
     // Timeout deltatime
     private float jumpTimeoutDelta;
@@ -387,14 +391,6 @@ public class PlayerController : MonoBehaviour
         // Move the player
         controller.Move(targetDirection.normalized * (speed * Time.deltaTime) + new Vector3(0.0f, verticalVelocity, 0.0f) * Time.deltaTime);
 
-        //// First person move
-        //if (_input.move != Vector2.zero)
-        //{
-        //    inputDirection = transform.right * _input.move.x + transform.forward * _input.move.y;
-        //}
-
-        //_controller.Move(inputDirection.normalized * (_speed * Time.deltaTime) + new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
-
         // Update animator if using character
         if (hasAnimator)
         {
@@ -422,6 +418,10 @@ public class PlayerController : MonoBehaviour
 
     private void ManagePointAndZoom()
     {
+        if (Input.GetKeyDown(KeyCode.Mouse1) && notLooking && !rotateInProgress)
+        {
+            StartCoroutine(RotateToTarget(lookTarget));
+        }
         if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
         {
             ActivateRig(rightHandRig, 3);
@@ -504,9 +504,43 @@ public class PlayerController : MonoBehaviour
         // Cinemachine will follow this target
         CinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + CameraAngleOverride, cinemachineTargetYaw, 0.0f);
 
-        //// Rotate the player with the camera
-        //rotationVelocity = currentLook.x * Time.deltaTime;
-        //transform.Rotate(Vector3.up * rotationVelocity);
+        // First person character rotation
+        if (cameraMode == 1)
+        {
+            // Get rotation velocity
+            rotationVelocity = currentLook.x * RotationSpeed * Time.deltaTime;
+
+            // Rotate the player with the camera
+            transform.Rotate(Vector3.up * rotationVelocity);
+        }
+
+        // Third person delayed character rotation
+        if (cameraMode == 0)
+        {
+            if (lookTimeoutDelta < 0 && !rotateInProgress)
+            {
+                StartCoroutine(RotateToTarget(lookTarget));
+            }
+        }
+    }
+
+    private IEnumerator RotateToTarget(GameObject target)
+    {
+        rotateInProgress = true;
+        MovementDisable();
+        Vector3 dir = (target.transform.position - transform.position).normalized;
+        Vector3 targetDirection = new Vector3(dir.x, 0, dir.z);
+        Quaternion targetRotation = Quaternion.LookRotation(targetDirection, Vector3.up);
+
+        do
+        {
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, 3);
+            yield return null;
+        } while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f);
+
+        lookTimeoutDelta = lookTimeout;
+        MovementEnable();
+        rotateInProgress = false;
     }
 
     private void CameraToggle()
@@ -552,7 +586,19 @@ public class PlayerController : MonoBehaviour
         else
         {
             // If the target is behind, don't look
-            notLooking = (angle > frontAngle) ? true : false;
+            if (angle > frontAngle)
+            {
+                notLooking = true;
+                if (lookTimeoutDelta >= 0)
+                {
+                    lookTimeoutDelta -= Time.deltaTime;
+                }
+            }
+            else
+            {
+                notLooking = false;
+                lookTimeoutDelta = lookTimeout;
+            }
         }
     }
 
@@ -607,13 +653,14 @@ public class PlayerController : MonoBehaviour
         }
 
         // Change sensitivity
-        if (RotationSpeed != ZoomRotationSpeed)
+        if (RotationSpeed != ZoomRotationSpeed) RotationSpeed = ZoomRotationSpeed;
+
+        // Stop perlin noise, unless in FPP
+        if (cameraMode != 1)
         {
-            RotationSpeed = ZoomRotationSpeed;
+            if (camNoise.m_FrequencyGain != 0) camNoise.m_FrequencyGain = 0;
         }
 
-        // Stop perlin noise
-        camNoise.m_FrequencyGain = 0;
     }
 
     private void ZoomOut()
@@ -637,13 +684,14 @@ public class PlayerController : MonoBehaviour
         }
 
         // Change sensitivity
-        if (RotationSpeed != NormalRotationSpeed)
+        if (RotationSpeed != NormalRotationSpeed) RotationSpeed = NormalRotationSpeed;
+
+        // Resume perlin noise, unless in FPP
+        if (cameraMode != 1)
         {
-            RotationSpeed = NormalRotationSpeed;
+            if (camNoise.m_FrequencyGain != 0.3f) camNoise.m_FrequencyGain = 0.3f;
         }
 
-        // Resume perlin noise
-        camNoise.m_FrequencyGain = 0.3f;
     }
 
     private float AngleDir(Vector3 fwd, Vector3 targetDir)
@@ -670,18 +718,24 @@ public class PlayerController : MonoBehaviour
         CameraCourutineInProgress = true;
         if (cameraMode == 0)
         {
+            // Third-person perspective
             FPPCamera.SetActive(false);
             TPPCamera.SetActive(true);
             StartCoroutine(GetActiveCamera());
             yield return new WaitForSeconds(0.2f);
+            // Resume perlin noise
+            if (camNoise.m_FrequencyGain != 0.3f) camNoise.m_FrequencyGain = 0.3f;
             MeshRenderer.shadowCastingMode = ShadowCastingMode.On;
         }
         if (cameraMode == 1)
         {
+            // First-person perspective
             FPPCamera.SetActive(true);
             TPPCamera.SetActive(false);
             StartCoroutine(GetActiveCamera());
             yield return new WaitForSeconds(0.8f);
+            // Stop perlin noise
+            if (camNoise.m_FrequencyGain != 0) camNoise.m_FrequencyGain = 0;
             MeshRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
         }
         yield return new WaitForSeconds(1.0f);
@@ -690,7 +744,6 @@ public class PlayerController : MonoBehaviour
 
     private IEnumerator GetActiveCamera()
     {
-        yield return null;
         activeCam = cinemachineBrain.ActiveVirtualCamera as CinemachineVirtualCamera;
         originalFov = activeCam.m_Lens.FieldOfView;
         camNoise = activeCam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
@@ -701,6 +754,8 @@ public class PlayerController : MonoBehaviour
         // Set dynamic camera values
         cameraFov = originalFov;
         cameraDistance = originalDistance;
+
+        yield return null;
     }
 
     private void ControlAnimations()
