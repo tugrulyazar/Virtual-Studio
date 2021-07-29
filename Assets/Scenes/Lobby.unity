@@ -238,6 +238,10 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: 27fb79279d3f5b942a79f0250f2b812d, type: 2}
+    - target: {fileID: -2097009584859504910, guid: eb0f88324ae987549819572e0a9a7e08, type: 3}
+      propertyPath: m_Convex
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: -486769339396483210, guid: eb0f88324ae987549819572e0a9a7e08, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -4610,9 +4614,9 @@ MonoBehaviour:
   BottomClamp: 70
   CameraAngleOverride: 0
   LockCameraPosition: 0
-  lookTarget: {fileID: 1451973751}
-  playerHead: {fileID: 7607922761674634523}
-  playerPos: {fileID: 1218880895}
+  lookTarget: {fileID: 1451973752}
+  playerHead: {fileID: 2961576389726134638}
+  playerPos: {fileID: 1218880896}
   tagObject: {fileID: 2134720236750715303, guid: 6ce6a0c7a8c116f40ba25abadc867ed0, type: 3}
   permObject: {fileID: 2134720236750715303, guid: 022cd9d483ee24844a75d1f88dde69ca, type: 3}
   crosshair: {fileID: 1762342502}

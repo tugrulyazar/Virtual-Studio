@@ -2,7 +2,6 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Animations.Rigging;
-using UnityEngine.UI;
 using Cinemachine;
 
 public class PlayerController : MonoBehaviour
@@ -60,11 +59,11 @@ public class PlayerController : MonoBehaviour
 
     [Header("Pointing")]
     [SerializeField]
-    private GameObject lookTarget;
+    private Transform lookTarget;
     [SerializeField]
-    private GameObject playerHead;
+    private Transform playerHead;
     [SerializeField]
-    private GameObject playerPos;
+    private Transform playerPos;
     [SerializeField]
     private GameObject tagObject;
     [SerializeField]
@@ -170,8 +169,8 @@ public class PlayerController : MonoBehaviour
     private const float speedOffset = 0.1f;
     private const float ZoomRotationSpeed = 0.3f;
     private const float NormalRotationSpeed = 1f;
-    private const float minZoomOffset = 0f;
-    private const float maxZoomOffset = 2f;
+    private const float minZoomOffset = 2f;
+    private const float maxZoomOffset = 6f;
 
     // Gizmo colors for editor
     private Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
@@ -234,6 +233,7 @@ public class PlayerController : MonoBehaviour
         // Reset timers on start
         jumpTimeoutDelta = JumpTimeout;
         fallTimeoutDelta = FallTimeout;
+        lookTimeoutDelta = lookTimeout;
     }
 
     private void Update()
@@ -410,17 +410,17 @@ public class PlayerController : MonoBehaviour
     private void MoveLookTarget()
     {
         // Simple move target according to camera while not validly aiming
-        if (!Input.GetKey(KeyCode.Mouse1) || !Physics.Raycast(mainCamera.position, mainCamera.forward, raycastDistance))
+        if (!zoomedIn || !Physics.Raycast(mainCamera.position, mainCamera.forward, raycastDistance))
         {
-            Vector3 prevPos = lookTarget.transform.position;
-            Vector3 nextPos = playerHead.transform.position + mainCamera.forward * targetDistance;
+            Vector3 prevPos = lookTarget.position;
+            Vector3 nextPos = playerHead.position + mainCamera.forward * targetDistance;
 
             if (prevPos != nextPos)
             {
                 prevPos = Vector3.Lerp(prevPos, nextPos, Time.deltaTime * transitionRate * 2);
             }
 
-            lookTarget.transform.position = prevPos;
+            lookTarget.position = prevPos;
         }
     }
 
@@ -442,7 +442,7 @@ public class PlayerController : MonoBehaviour
             // Move the pointing to the center of the screen
             if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance))
             {
-                lookTarget.transform.position = Vector3.Lerp(lookTarget.transform.position, hit.point, Time.deltaTime * transitionRate * 3);
+                lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * transitionRate * 3);
 
                 // Place tag at pointed location
                 if (Input.GetKeyDown(KeyCode.Mouse0))
@@ -495,7 +495,8 @@ public class PlayerController : MonoBehaviour
                 zoomOffset = Mathf.Clamp(zoomOffset + 0.5f, minZoomOffset, maxZoomOffset);
                 zoomDistance = originalDistance - zoomOffset;
             }
-            else if (Input.mouseScrollDelta.y < 0)
+
+            if (Input.mouseScrollDelta.y < 0)
             {
                 zoomOffset = Mathf.Clamp(zoomOffset - 0.5f, minZoomOffset, maxZoomOffset);
                 zoomDistance = originalDistance - zoomOffset;
@@ -503,9 +504,9 @@ public class PlayerController : MonoBehaviour
         }
 
         // Zoom out
-        // TODO: implement absolute in zoomout, redo conditions, maybe do coroutine
         else if (handRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
         {
+            zoomDistance = minZoomOffset;
             DeactivateRig(handRig, 4);
             EnableCamToggle();
             ZoomOut();
@@ -550,7 +551,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private IEnumerator RotateToTarget(GameObject target)
+    private IEnumerator RotateToTarget(Transform target)
     {
         rotateInProgress = true;
         MovementDisable();
@@ -606,9 +607,9 @@ public class PlayerController : MonoBehaviour
     private void CheckTargetingStatus()
     {
         // Get the angle between the camera and player heading and target position in left/right
-        heading = lookTarget.transform.position - playerPos.transform.position;
-        float angle = Vector3.Angle(heading, playerPos.transform.forward);
-        float angleDir = AngleDir(playerPos.transform.position, heading); // 1: left , -1: right
+        heading = lookTarget.position - playerPos.position;
+        float angle = Vector3.Angle(heading, playerPos.forward);
+        float angleDir = AngleDir(playerPos.position, heading); // 1: left , -1: right
 
         if (inAnimation)
         {
@@ -686,15 +687,11 @@ public class PlayerController : MonoBehaviour
         cameraDistance = (cameraDistance < zoomDistance + 0.01f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * transitionRate * 2);
         camTPF.CameraDistance = cameraDistance;
 
-
         // Change sensitivity
         if (RotationSpeed != ZoomRotationSpeed) RotationSpeed = ZoomRotationSpeed;
 
         // Stop perlin noise, unless in FPP
-        if (cameraMode != 1)
-        {
-            if (camNoise.m_FrequencyGain != 0) camNoise.m_FrequencyGain = 0;
-        } 
+        if (cameraMode != 1 && camNoise.m_FrequencyGain != 0) camNoise.m_FrequencyGain = 0;
     }
 
     private void ZoomOut()
@@ -713,7 +710,10 @@ public class PlayerController : MonoBehaviour
             // Lerp camera fov to original
             cameraFov = (cameraFov > originalFov - 0.01f) ? originalFov : Mathf.Lerp(cameraFov, originalFov, Time.deltaTime * transitionRate * 2);
             activeCam.m_Lens.FieldOfView = cameraFov;
+        }
 
+        if (cameraDistance != originalDistance)
+        {
             // Lerp camera distance to original
             cameraDistance = (cameraDistance > originalDistance - 0.1f) ? originalDistance : Mathf.Lerp(cameraDistance, originalDistance, Time.deltaTime * transitionRate * 2);
             camTPF.CameraDistance = cameraDistance;
@@ -723,11 +723,7 @@ public class PlayerController : MonoBehaviour
         if (RotationSpeed != NormalRotationSpeed) RotationSpeed = NormalRotationSpeed;
 
         // Resume perlin noise, unless in FPP
-        if (cameraMode != 1)
-        {
-            if (camNoise.m_FrequencyGain != 0.3f) camNoise.m_FrequencyGain = 0.3f;
-        }
-
+        if (cameraMode != 1 && camNoise.m_FrequencyGain != 0.3f) camNoise.m_FrequencyGain = 0.3f;
     }
 
     private float AngleDir(Vector3 fwd, Vector3 targetDir)
@@ -784,8 +780,8 @@ public class PlayerController : MonoBehaviour
 
         // Shoulder side is between 0 (left) and 1 (right)
         float camSide = shoulderSide;
-        float targetSide = 1f-shoulderSide;
-        
+        float targetSide = 1f - shoulderSide;
+
         // Switch hands
         if (camSide > targetSide)
         {
