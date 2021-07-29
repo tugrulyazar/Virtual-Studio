@@ -66,7 +66,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private GameObject playerPos;
     [SerializeField]
-    private GameObject tagSphere;
+    private GameObject tagObject;
+    [SerializeField]
+    private GameObject permObject;
     [SerializeField]
     private GameObject crosshair;
     [SerializeField]
@@ -149,7 +151,8 @@ public class PlayerController : MonoBehaviour
     private float originalDistance;
     private float RotationSpeed = 1.0f;
     private RaycastHit hit;
-    GameObject mySphere;
+    GameObject myTag;
+    GameObject myPermTag;
 
     // Timeout deltatime
     private float jumpTimeoutDelta;
@@ -237,11 +240,14 @@ public class PlayerController : MonoBehaviour
         CheckTargetingStatus();
         ManageHead();
 
+
+
         // Hand point and camera zoom goes here
-        // ManageHandAndZoom();
+        // ManagePointAndZoom();
         if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
         {
             activateRig(rightHandRig, 3);
+            DisableCamToggle();
             zoomIn();
 
             // Move the pointing to the center of the screen
@@ -252,21 +258,37 @@ public class PlayerController : MonoBehaviour
                 // Place sphere at the pointed location
                 if (Input.GetKeyDown(KeyCode.Mouse0))
                 {
-                    if (!mySphere)
+                    if (!myTag)
                     {
-                        mySphere = Instantiate(tagSphere);
-                        mySphere.transform.position = hit.point;
+                        myTag = Instantiate(tagObject);
+                        myTag.transform.position = hit.point;
                     }
                     else
                     {
-                        mySphere.transform.position = hit.point;
+                        myTag.transform.position = hit.point;
                     }
                 }
+
+                if (Input.GetKeyDown(KeyCode.E))
+                {
+                    if (!hit.transform.CompareTag("PermObject"))
+                    {
+                        myPermTag = Instantiate(permObject);
+                        myPermTag.transform.position = hit.point;
+                    }
+                    else
+                    {
+                        Destroy(hit.transform.gameObject);
+                    }
+                }
+
+
+
             }
             // If you're not pointing to a valid location
             else if (Input.GetKeyDown(KeyCode.Mouse0))
             {
-                Destroy(mySphere);
+                Destroy(myTag);
             }
 
 
@@ -274,8 +296,11 @@ public class PlayerController : MonoBehaviour
         else if (rightHandRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
         {
             deactivateRig(rightHandRig, 4);
+            EnableCamToggle();
             zoomOut();
         }
+
+
 
         ControlAnimations();
         CameraToggle();
@@ -488,6 +513,16 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void DisableCamToggle()
+    {
+        if (input.Player.ToggleCamera.enabled) input.Player.ToggleCamera.Disable();
+    }
+
+    private void EnableCamToggle()
+    {
+        if (!input.Player.ToggleCamera.enabled) input.Player.ToggleCamera.Enable();
+    }
+
     private void CheckTargetingStatus()
     {
         // Get the angle between the camera and player heading and target position in left/right
@@ -495,13 +530,14 @@ public class PlayerController : MonoBehaviour
         float angle = Vector3.Angle(heading, playerPos.transform.forward);
         float angleDir = AngleDir(playerPos.transform.position, heading); // 1: left , -1: right
 
-        // If the target is behind, don't look
         if (inAnimation)
         {
+            // If in animation, don't look
             notLooking = true;
         }
         else
         {
+            // If the target is behind, don't look
             notLooking = (angle > frontAngle) ? true : false;
         }
     }
@@ -683,7 +719,7 @@ public class PlayerController : MonoBehaviour
     private IEnumerator OneShotAnimation(int animID)
     {
         inAnimation = true;
-        
+
         // Disable movement while in animation
         movementDisable();
 
@@ -694,7 +730,7 @@ public class PlayerController : MonoBehaviour
 
         // Wait for the animation duration
         yield return new WaitForSeconds(4); // TODO: need to get animation clip length
-        
+
         // Enable movement after animation
         movementEnable();
         inAnimation = false;
