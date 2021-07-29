@@ -131,6 +131,7 @@ public class PlayerController : MonoBehaviour
     private float cameraFov;
     private float cameraDistance;
     private float zoomFov = 30;
+    private float zoomOffset = 2;
     private float originalFov;
     private float zoomDistance;
     private float originalDistance;
@@ -169,6 +170,8 @@ public class PlayerController : MonoBehaviour
     private const float speedOffset = 0.1f;
     private const float ZoomRotationSpeed = 0.3f;
     private const float NormalRotationSpeed = 1f;
+    private const float minZoomOffset = 0f;
+    private const float maxZoomOffset = 2f;
 
     // Gizmo colors for editor
     private Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
@@ -423,10 +426,13 @@ public class PlayerController : MonoBehaviour
 
     private void ManagePointAndZoom()
     {
+        // Rotate to target on mouse press if not looking
         if (Input.GetKeyDown(KeyCode.Mouse1) && notLooking && !rotateInProgress)
         {
             StartCoroutine(RotateToTarget(lookTarget));
         }
+
+        // Zoom in
         if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
         {
             ActivateRig(handRig, 3);
@@ -473,6 +479,7 @@ public class PlayerController : MonoBehaviour
                 Destroy(myTag);
             }
 
+            // Destroy perm objects
             if (Input.GetKeyDown(KeyCode.Mouse2))
             {
                 GameObject[] permObjects = GameObject.FindGameObjectsWithTag("PermObject");
@@ -482,7 +489,21 @@ public class PlayerController : MonoBehaviour
                 }
             }
 
+            // Scroll wheel zoom set
+            if (Input.mouseScrollDelta.y > 0)
+            {
+                zoomOffset = Mathf.Clamp(zoomOffset + 0.5f, minZoomOffset, maxZoomOffset);
+                zoomDistance = originalDistance - zoomOffset;
+            }
+            else if (Input.mouseScrollDelta.y < 0)
+            {
+                zoomOffset = Mathf.Clamp(zoomOffset - 0.5f, minZoomOffset, maxZoomOffset);
+                zoomDistance = originalDistance - zoomOffset;
+            }
         }
+
+        // Zoom out
+        // TODO: implement absolute in zoomout, redo conditions, maybe do coroutine
         else if (handRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
         {
             DeactivateRig(handRig, 4);
@@ -654,16 +675,17 @@ public class PlayerController : MonoBehaviour
             crosshair.SetActive(true);
         }
 
-        if (cameraFov != zoomFov && cameraDistance != zoomDistance)
+        if (cameraFov != zoomFov)
         {
             // Lerp camera fov to zoom fov
             cameraFov = (cameraFov < zoomFov + 0.1f) ? zoomFov : Mathf.Lerp(cameraFov, zoomFov, Time.deltaTime * transitionRate * 2);
             activeCam.m_Lens.FieldOfView = cameraFov;
-
-            // Lerp camera distance to zoom distance
-            cameraDistance = (cameraDistance < zoomDistance + 0.01f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * transitionRate * 2);
-            camTPF.CameraDistance = cameraDistance;
         }
+
+        // Lerp camera distance to zoom distance, kept dynamic because of scroll
+        cameraDistance = (cameraDistance < zoomDistance + 0.01f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * transitionRate * 2);
+        camTPF.CameraDistance = cameraDistance;
+
 
         // Change sensitivity
         if (RotationSpeed != ZoomRotationSpeed) RotationSpeed = ZoomRotationSpeed;
@@ -797,7 +819,7 @@ public class PlayerController : MonoBehaviour
         camTPF = activeCam.GetCinemachineComponent<Cinemachine3rdPersonFollow>();
         originalDistance = camTPF.CameraDistance;
         shoulderSide = camTPF.CameraSide;
-        zoomDistance = originalDistance - 2;
+        zoomDistance = originalDistance - zoomOffset;
 
         // Set dynamic camera values
         cameraFov = originalFov;
