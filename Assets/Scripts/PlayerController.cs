@@ -234,10 +234,11 @@ public class PlayerController : MonoBehaviour
         }
 
         // TODO: Move target funcs goes here
-        CheckTargetLocation();
+        CheckTargetingStatus();
         ManageHead();
 
-        // Hand point and camera zoom
+        // Hand point and camera zoom goes here
+        // ManageHandAndZoom();
         if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
         {
             activateRig(rightHandRig, 3);
@@ -487,7 +488,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void CheckTargetLocation()
+    private void CheckTargetingStatus()
     {
         // Get the angle between the camera and player heading and target position in left/right
         heading = lookTarget.transform.position - playerPos.transform.position;
@@ -495,7 +496,14 @@ public class PlayerController : MonoBehaviour
         float angleDir = AngleDir(playerPos.transform.position, heading); // 1: left , -1: right
 
         // If the target is behind, don't look
-        notLooking = (angle > frontAngle) ? true : false;
+        if (inAnimation)
+        {
+            notLooking = true;
+        }
+        else
+        {
+            notLooking = (angle > frontAngle) ? true : false;
+        }
     }
 
     private void ManageHead()
@@ -640,7 +648,7 @@ public class PlayerController : MonoBehaviour
         originalDistance = camTPF.CameraDistance;
         zoomDistance = originalDistance - 2;
 
-        // Temp camera values
+        // Set dynamic camera values
         cameraFov = originalFov;
         cameraDistance = originalDistance;
     }
@@ -685,7 +693,7 @@ public class PlayerController : MonoBehaviour
         animator.SetBool(animID, false);
 
         // Wait for the animation duration
-        yield return new WaitForSeconds(5); // TODO: need to get animation clip length
+        yield return new WaitForSeconds(4); // TODO: need to get animation clip length
         
         // Enable movement after animation
         movementEnable();
@@ -711,16 +719,12 @@ public class PlayerController : MonoBehaviour
     {
         input.Player.Move.Disable();
         input.Player.Jump.Disable();
-        // TODO: disable pointing
-        // TODO: disable head look
     }
 
     private void movementEnable()
     {
         input.Player.Move.Enable();
         input.Player.Jump.Enable();
-        // TODO: enable pointing
-        // TODO: enable head look
     }
 
     private static float ClampAngle(float lfAngle, float lfMin, float lfMax)
