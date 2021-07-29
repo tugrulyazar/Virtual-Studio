@@ -119,11 +119,22 @@ public class PlayerController : MonoBehaviour
     private CharacterController controller;
 
     // Camera and cinemachine
+    private CinemachineBrain cinemachineBrain;
+    private CinemachineVirtualCamera activeCam;
+    private Cinemachine3rdPersonFollow camTPF;
+    private CinemachineBasicMultiChannelPerlin camNoise;
     private Transform mainCamera;
     private float cinemachineTargetYaw;
     private float cinemachineTargetPitch;
     private int cameraMode;
-    private bool CameraCourutineInProgress;
+    private bool CameraCoroutineInProgress;
+    private float cameraFov;
+    private float cameraDistance;
+    private float zoomFov = 30;
+    private float originalFov;
+    private float zoomDistance;
+    private float originalDistance;
+    private float shoulderSide;
 
     // Player
     private float speed;
@@ -135,28 +146,18 @@ public class PlayerController : MonoBehaviour
     private float targetSpeed;
     private bool Grounded = true;
 
-    // Head look and zoom
+    // Head look, hand point and zoom
     private float transitionRate = 2.0f;
     private bool notLooking = false;
     private bool rotateInProgress = false;
     private Vector3 heading;
-    private CinemachineBrain cinemachineBrain;
-    private CinemachineVirtualCamera activeCam;
-    private Cinemachine3rdPersonFollow camTPF;
-    private CinemachineBasicMultiChannelPerlin camNoise;
-    private float cameraFov;
-    private float cameraDistance;
-    private float zoomFov = 30;
-    private float originalFov;
-    private float zoomDistance;
-    private float originalDistance;
     private float RotationSpeed = 1.0f;
+    private const float lookTimeout = 3f;
+    private float lookTimeoutDelta;
     private RaycastHit hit;
     GameObject myTag;
     GameObject myPermTag;
-
-    private const float lookTimeout = 3f;
-    private float lookTimeoutDelta;
+    private Rig handRig;
 
     // Timeout deltatime
     private float jumpTimeoutDelta;
@@ -222,6 +223,9 @@ public class PlayerController : MonoBehaviour
         // Get active cam
         cinemachineBrain = Camera.main.GetComponent<CinemachineBrain>();
         StartCoroutine(GetActiveCamera());
+
+        // Set active hand
+        handRig = rightHandRig;
 
         // Reset timers on start
         jumpTimeoutDelta = JumpTimeout;
@@ -424,7 +428,7 @@ public class PlayerController : MonoBehaviour
         }
         if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
         {
-            ActivateRig(rightHandRig, 3);
+            ActivateRig(handRig, 3);
             DisableCamToggle();
             ZoomIn();
 
@@ -478,9 +482,9 @@ public class PlayerController : MonoBehaviour
             }
 
         }
-        else if (rightHandRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
+        else if (handRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
         {
-            DeactivateRig(rightHandRig, 4);
+            DeactivateRig(handRig, 4);
             EnableCamToggle();
             ZoomOut();
         }
@@ -546,7 +550,7 @@ public class PlayerController : MonoBehaviour
     private void CameraToggle()
     {
         // Toggle camera mode on key press, for how many ever camera modes there will be
-        if (camTogglePressed && !CameraCourutineInProgress)
+        if (camTogglePressed && !CameraCoroutineInProgress)
         {
             // Final camera mode index case
             if (cameraMode == 1)
@@ -558,6 +562,12 @@ public class PlayerController : MonoBehaviour
                 cameraMode += 1;
             }
             StartCoroutine(CameraChange());
+        }
+
+        // Shoulder toggle
+        if (Input.GetKeyDown(KeyCode.R) && !CameraCoroutineInProgress)
+        {
+            StartCoroutine(ShoulderChange());
         }
     }
 
@@ -715,7 +725,7 @@ public class PlayerController : MonoBehaviour
 
     private IEnumerator CameraChange()
     {
-        CameraCourutineInProgress = true;
+        CameraCoroutineInProgress = true;
         if (cameraMode == 0)
         {
             // Third-person perspective
@@ -739,7 +749,40 @@ public class PlayerController : MonoBehaviour
             MeshRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
         }
         yield return new WaitForSeconds(1.0f);
-        CameraCourutineInProgress = false;
+        CameraCoroutineInProgress = false;
+    }
+
+    private IEnumerator ShoulderChange()
+    {
+        CameraCoroutineInProgress = true;
+
+        // Shoulder side is between 0 (left) and 1 (right)
+        float camSide = shoulderSide;
+        float targetSide = 1f-shoulderSide;
+        
+        // Switch hands
+        if (camSide > targetSide)
+        {
+            handRig = leftHandRig;
+        }
+        else
+        {
+            handRig = rightHandRig;
+        }
+
+        // Lerp shoulder side
+        do
+        {
+            camSide = Mathf.Lerp(camSide, targetSide, Time.deltaTime * transitionRate * 2);
+            camTPF.CameraSide = camSide;
+            yield return null;
+        } while (Mathf.Abs(camSide - targetSide) > 0.001f);
+
+        // Zero side
+        camTPF.CameraSide = targetSide;
+        // Set new shoulder side
+        shoulderSide = targetSide;
+        CameraCoroutineInProgress = false;
     }
 
     private IEnumerator GetActiveCamera()
@@ -749,6 +792,7 @@ public class PlayerController : MonoBehaviour
         camNoise = activeCam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
         camTPF = activeCam.GetCinemachineComponent<Cinemachine3rdPersonFollow>();
         originalDistance = camTPF.CameraDistance;
+        shoulderSide = camTPF.CameraSide;
         zoomDistance = originalDistance - 2;
 
         // Set dynamic camera values
