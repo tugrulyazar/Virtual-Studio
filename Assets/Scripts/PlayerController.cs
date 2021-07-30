@@ -494,13 +494,27 @@ public class PlayerController : MonoBehaviour
             // Scroll wheel zoom set
             if (Input.mouseScrollDelta.y > 0)
             {
-                zoomOffset = Mathf.Clamp(zoomOffset + 0.5f, minZoomOffset, maxZoomOffset);
+                if (cameraMode == 0)
+                {
+                    zoomOffset = Mathf.Clamp(zoomOffset + 0.5f, minZoomOffset, maxZoomOffset);
+                }
+                else if (cameraMode == 1)
+                {
+                    zoomOffset = Mathf.Clamp(zoomOffset + 0.5f, 0, maxZoomOffset - minZoomOffset);
+                }
                 zoomDistance = originalDistance - zoomOffset;
             }
 
             if (Input.mouseScrollDelta.y < 0)
             {
-                zoomOffset = Mathf.Clamp(zoomOffset - 0.5f, minZoomOffset, maxZoomOffset);
+                if (cameraMode == 0)
+                {
+                    zoomOffset = Mathf.Clamp(zoomOffset - 0.5f, minZoomOffset, maxZoomOffset);
+                }
+                else if (cameraMode == 1)
+                {
+                    zoomOffset = Mathf.Clamp(zoomOffset - 0.5f, 0, maxZoomOffset - minZoomOffset);
+                }
                 zoomDistance = originalDistance - zoomOffset;
             }
         }
@@ -508,7 +522,17 @@ public class PlayerController : MonoBehaviour
         // Zoom out
         else if (handRig.weight != 0 || cameraFov != originalFov || cameraDistance != originalDistance)
         {
-            zoomDistance = originalDistance - minZoomOffset;
+            if (cameraMode == 0)
+            {
+                // TPP zoom distance
+                zoomDistance = originalDistance - minZoomOffset;
+            }
+            else if (cameraMode == 1)
+            {
+                // FPP zoom distance
+                zoomDistance = 0;
+            }
+
             DeactivateRig(handRig, 4);
             EnableCamToggle();
             ZoomOut();
@@ -575,7 +599,7 @@ public class PlayerController : MonoBehaviour
     private void CameraToggle()
     {
         // Toggle camera mode on key press, for how many ever camera modes there will be
-        if (camTogglePressed && !CameraCoroutineInProgress)
+        if (camTogglePressed && !CameraCoroutineInProgress && cameraDistance == originalDistance)
         {
             // Final camera mode index case
             if (cameraMode == 1)
@@ -714,7 +738,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // Change camera fov and distance
-        if (cameraFov != originalFov && cameraDistance != originalDistance)
+        if (cameraFov != originalFov)
         {
             // Lerp camera fov to original
             cameraFov = (cameraFov > originalFov - 0.01f) ? originalFov : Mathf.Lerp(cameraFov, originalFov, Time.deltaTime * transitionRate * 2);
@@ -827,7 +851,17 @@ public class PlayerController : MonoBehaviour
         camTPF = activeCam.GetCinemachineComponent<Cinemachine3rdPersonFollow>();
         originalDistance = camTPF.CameraDistance;
         shoulderSide = camTPF.CameraSide;
-        zoomDistance = originalDistance - minZoomOffset;
+
+        if (cameraMode == 0)
+        {
+            // TPP zoom distance
+            zoomDistance = originalDistance - minZoomOffset;
+        }
+        else if (cameraMode == 1)
+        {
+            // FPP zoom distance
+            zoomDistance = 0;
+        }
 
         // Set dynamic camera values
         cameraFov = originalFov;
