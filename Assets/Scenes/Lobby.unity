@@ -4623,6 +4623,9 @@ MonoBehaviour:
   headRig: {fileID: 1709443312}
   rightHandRig: {fileID: 1407519215}
   leftHandRig: {fileID: 132754170}
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 1
   targetDistance: 4
   frontAngle: 120
   raycastDistance: 20

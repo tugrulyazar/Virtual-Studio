@@ -76,6 +76,8 @@ public class PlayerController : MonoBehaviour
     private Rig rightHandRig;
     [SerializeField]
     private Rig leftHandRig;
+    [SerializeField]
+    private LayerMask layerMask;
 
     [Space(10)]
     [SerializeField]
@@ -440,7 +442,7 @@ public class PlayerController : MonoBehaviour
             ZoomIn();
 
             // Move the pointing to the center of the screen
-            if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance))
+            if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance, layerMask))
             {
                 lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * transitionRate * 3);
 
@@ -504,9 +506,9 @@ public class PlayerController : MonoBehaviour
         }
 
         // Zoom out
-        else if (handRig.weight != 0 && cameraFov != originalFov && cameraDistance != originalDistance)
+        else if (handRig.weight != 0 || cameraFov != originalFov || cameraDistance != originalDistance)
         {
-            zoomDistance = minZoomOffset;
+            zoomDistance = originalDistance - minZoomOffset;
             DeactivateRig(handRig, 4);
             EnableCamToggle();
             ZoomOut();
@@ -618,13 +620,20 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            // If the target is behind, don't look
+            // If the target is behind and not player isn't moving, decrease timer
             if (angle > frontAngle)
             {
                 notLooking = true;
-                if (lookTimeoutDelta >= 0)
+                if (speed == 0)
                 {
-                    lookTimeoutDelta -= Time.deltaTime;
+                    if (lookTimeoutDelta >= 0)
+                    {
+                        lookTimeoutDelta -= Time.deltaTime;
+                    }
+                }
+                else
+                {
+                    lookTimeoutDelta = lookTimeout;
                 }
             }
             else
@@ -679,7 +688,7 @@ public class PlayerController : MonoBehaviour
         if (cameraFov != zoomFov)
         {
             // Lerp camera fov to zoom fov
-            cameraFov = (cameraFov < zoomFov + 0.1f) ? zoomFov : Mathf.Lerp(cameraFov, zoomFov, Time.deltaTime * transitionRate * 2);
+            cameraFov = (cameraFov < zoomFov + 0.01f) ? zoomFov : Mathf.Lerp(cameraFov, zoomFov, Time.deltaTime * transitionRate * 2);
             activeCam.m_Lens.FieldOfView = cameraFov;
         }
 
@@ -715,7 +724,7 @@ public class PlayerController : MonoBehaviour
         if (cameraDistance != originalDistance)
         {
             // Lerp camera distance to original
-            cameraDistance = (cameraDistance > originalDistance - 0.1f) ? originalDistance : Mathf.Lerp(cameraDistance, originalDistance, Time.deltaTime * transitionRate * 2);
+            cameraDistance = (cameraDistance > originalDistance - 0.01f) ? originalDistance : Mathf.Lerp(cameraDistance, originalDistance, Time.deltaTime * transitionRate * 2);
             camTPF.CameraDistance = cameraDistance;
         }
 
@@ -753,6 +762,7 @@ public class PlayerController : MonoBehaviour
             // Third-person perspective
             FPPCamera.SetActive(false);
             TPPCamera.SetActive(true);
+            yield return null;
             StartCoroutine(GetActiveCamera());
             yield return new WaitForSeconds(0.2f);
             // Resume perlin noise
@@ -764,6 +774,7 @@ public class PlayerController : MonoBehaviour
             // First-person perspective
             FPPCamera.SetActive(true);
             TPPCamera.SetActive(false);
+            yield return null;
             StartCoroutine(GetActiveCamera());
             yield return new WaitForSeconds(0.8f);
             // Stop perlin noise
@@ -809,19 +820,18 @@ public class PlayerController : MonoBehaviour
 
     private IEnumerator GetActiveCamera()
     {
+        yield return null;
         activeCam = cinemachineBrain.ActiveVirtualCamera as CinemachineVirtualCamera;
         originalFov = activeCam.m_Lens.FieldOfView;
         camNoise = activeCam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
         camTPF = activeCam.GetCinemachineComponent<Cinemachine3rdPersonFollow>();
         originalDistance = camTPF.CameraDistance;
         shoulderSide = camTPF.CameraSide;
-        zoomDistance = originalDistance - zoomOffset;
+        zoomDistance = originalDistance - minZoomOffset;
 
         // Set dynamic camera values
         cameraFov = originalFov;
         cameraDistance = originalDistance;
-
-        yield return null;
     }
 
     private void ControlAnimations()
