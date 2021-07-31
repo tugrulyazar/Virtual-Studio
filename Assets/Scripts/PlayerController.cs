@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Animations.Rigging;
@@ -164,6 +165,8 @@ public class PlayerController : MonoBehaviour
     private float RotationSpeed = 1.0f;
     private const float lookTimeout = 3f;
     private float lookTimeoutDelta;
+    private const float holdTimeout = 3f;
+    private float holdTimeoutDelta;
     private RaycastHit hit;
     GameObject myTag;
     GameObject myDistTag;
@@ -243,6 +246,7 @@ public class PlayerController : MonoBehaviour
         jumpTimeoutDelta = JumpTimeout;
         fallTimeoutDelta = FallTimeout;
         lookTimeoutDelta = lookTimeout;
+        holdTimeoutDelta = holdTimeout;
     }
 
     private void Update()
@@ -452,7 +456,7 @@ public class PlayerController : MonoBehaviour
             if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance, layerMask))
             {
                 lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * transitionRate * 3);
-
+                Debug.Log(holdTimeoutDelta);
                 // Place tag at pointed location
                 if (Input.GetKeyDown(KeyCode.Mouse0))
                 {
@@ -480,46 +484,89 @@ public class PlayerController : MonoBehaviour
                     }
                 }
 
-                // Distance spheres
-                if (Input.GetKeyDown(KeyCode.C))
+                // Create distance measuring objects
+                if (Input.GetKeyUp(KeyCode.C))
                 {
-                    GameObject[] distObjects = GameObject.FindGameObjectsWithTag("DistObject");
-                    if (distObjects.Length == 2)
+                    // Check if key up didn't come after holding down to delete
+                    if (holdTimeoutDelta > 0)
                     {
-                        foreach (GameObject obj in distObjects)
+                        // Get distance objects
+                        GameObject[] distObjects = GameObject.FindGameObjectsWithTag("DistObject");
+
+                        if (distObjects.Length == 2)
+                        {
+                            // If there already are two objects, destroy them
+                            foreach (GameObject obj in distObjects)
+                            {
+                                Destroy(obj);
+                            }
+                            // Instantiate a new one
+                            Instantiate(distObject, hit.point, Quaternion.identity);
+                        }
+                        else if (distObjects.Length == 1)
+                        {
+                            // Instantiate second object
+                            myDistTag = Instantiate(distObject);
+                            myDistTag.transform.position = hit.point;
+
+                            // Get distance
+                            Vector3 start = distObjects[0].transform.position;
+                            Vector3 end = myDistTag.transform.position;
+                            Vector3 mid = Vector3.Lerp(start, end, 0.5f);
+                            float distance = Vector3.Distance(start, end);
+                            distance = Mathf.Round(distance * 100f) / 100f;
+                            Color color = Color.yellow;
+
+                            // Draw line and place text
+                            DrawLine(start, end);
+                            GameObject distText = Instantiate(textObject);
+                            distText.transform.position = mid;
+                            TextMeshPro tmp = distText.GetComponent<TextMeshPro>();
+                            tmp.SetText(distance + "m");
+
+                            // Make the text look at player
+                            Vector3 dir = (distText.transform.position - transform.position).normalized;
+                            Vector3 targetDirection = new Vector3(dir.x, 0, dir.z);
+                            Quaternion targetRotation = Quaternion.LookRotation(targetDirection, Vector3.up);
+                            distText.transform.rotation = Quaternion.RotateTowards(distText.transform.rotation, targetRotation, 360);
+                        }
+                        else
+                        {
+                            // There isn't any, spawn first object, happens only once in play
+                            myDistTag = Instantiate(distObject);
+                            myDistTag.transform.position = hit.point;
+                        }
+                    }
+
+                    // Reset timer
+                    holdTimeoutDelta = holdTimeout;
+
+                }
+
+                // Destroy distance texts and lines
+                if (Input.GetKey(KeyCode.C))
+                {
+                    // Decrease timer while held
+                    if (holdTimeoutDelta >= 0.0f)
+                    {
+                        holdTimeoutDelta -= Time.deltaTime;
+                    }
+
+                    // Destroy distance tags, texts and lines
+                    else
+                    {
+                        GameObject[] distPermObjects = GameObject.FindGameObjectsWithTag("DistPermObject");
+                        GameObject[] distObjects = GameObject.FindGameObjectsWithTag("DistObject");
+                        var objList = new List<GameObject>();
+                        objList.AddRange(distPermObjects);
+                        objList.AddRange(distObjects);
+
+                        foreach (GameObject obj in objList)
                         {
                             Destroy(obj);
                         }
                     }
-                    else if (distObjects.Length == 1)
-                    {
-                        myDistTag = Instantiate(distObject);
-                        myDistTag.transform.position = hit.point;
-
-                        Vector3 start = distObjects[0].transform.position;
-                        Vector3 end = myDistTag.transform.position;
-                        Vector3 mid = Vector3.Lerp(start, end, 0.5f);
-                        float distance = Vector3.Distance(start, end);
-                        distance = Mathf.Round(distance * 100f) / 100f;
-                        Color color = Color.yellow;
-
-                        DrawLine(start, end);
-                        GameObject distText = Instantiate(textObject);
-                        distText.transform.position = mid;
-                        TextMeshPro tmp = distText.GetComponent<TextMeshPro>();
-                        tmp.SetText(distance + "m");
-
-                        Vector3 dir = (distText.transform.position - transform.position).normalized;
-                        Vector3 targetDirection = new Vector3(dir.x, 0, dir.z);
-                        Quaternion targetRotation = Quaternion.LookRotation(targetDirection, Vector3.up);
-                        distText.transform.rotation = Quaternion.RotateTowards(distText.transform.rotation, targetRotation, 360);
-                    }
-                    else
-                    {
-                        myDistTag = Instantiate(distObject);
-                        myDistTag.transform.position = hit.point;
-                    }
-
+                    
                 }
 
             }
