@@ -4619,6 +4619,9 @@ MonoBehaviour:
   playerPos: {fileID: 1218880896}
   tagObject: {fileID: 2134720236750715303, guid: 6ce6a0c7a8c116f40ba25abadc867ed0, type: 3}
   permObject: {fileID: 2134720236750715303, guid: 022cd9d483ee24844a75d1f88dde69ca, type: 3}
+  distObject: {fileID: 2134720236750715303, guid: cd9409e8acd95584bb5d6954e42f4ba7, type: 3}
+  distLine: {fileID: 3999916806215343190, guid: 90eb2d50daf572c45b9b76d82d35e32f, type: 3}
+  textObject: {fileID: 2726429467195485600, guid: fb91dfd20da13b840a6f7af7e615db1d, type: 3}
   crosshair: {fileID: 1762342502}
   headRig: {fileID: 1709443312}
   rightHandRig: {fileID: 1407519215}

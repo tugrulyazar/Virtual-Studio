@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Animations.Rigging;
 using Cinemachine;
+using TMPro;
 
 public class PlayerController : MonoBehaviour
 {
@@ -68,6 +69,12 @@ public class PlayerController : MonoBehaviour
     private GameObject tagObject;
     [SerializeField]
     private GameObject permObject;
+    [SerializeField]
+    private GameObject distObject;
+    [SerializeField]
+    private GameObject distLine;
+    [SerializeField]
+    private GameObject textObject;
     [SerializeField]
     private GameObject crosshair;
     [SerializeField]
@@ -159,7 +166,7 @@ public class PlayerController : MonoBehaviour
     private float lookTimeoutDelta;
     private RaycastHit hit;
     GameObject myTag;
-    GameObject myPermTag;
+    GameObject myDistTag;
     private Rig handRig;
 
     // Timeout deltatime
@@ -465,13 +472,54 @@ public class PlayerController : MonoBehaviour
                 {
                     if (!hit.transform.CompareTag("PermObject"))
                     {
-                        myPermTag = Instantiate(permObject);
-                        myPermTag.transform.position = hit.point;
+                        Instantiate(permObject, hit.point, Quaternion.identity);
                     }
                     else
                     {
                         Destroy(hit.transform.gameObject);
                     }
+                }
+
+                // Distance spheres
+                if (Input.GetKeyDown(KeyCode.C))
+                {
+                    GameObject[] distObjects = GameObject.FindGameObjectsWithTag("DistObject");
+                    if (distObjects.Length == 2)
+                    {
+                        foreach (GameObject obj in distObjects)
+                        {
+                            Destroy(obj);
+                        }
+                    }
+                    else if (distObjects.Length == 1)
+                    {
+                        myDistTag = Instantiate(distObject);
+                        myDistTag.transform.position = hit.point;
+
+                        Vector3 start = distObjects[0].transform.position;
+                        Vector3 end = myDistTag.transform.position;
+                        Vector3 mid = Vector3.Lerp(start, end, 0.5f);
+                        float distance = Vector3.Distance(start, end);
+                        distance = Mathf.Round(distance * 100f) / 100f;
+                        Color color = Color.yellow;
+
+                        DrawLine(start, end);
+                        GameObject distText = Instantiate(textObject);
+                        distText.transform.position = mid;
+                        TextMeshPro tmp = distText.GetComponent<TextMeshPro>();
+                        tmp.SetText(distance + "m");
+
+                        Vector3 dir = (distText.transform.position - transform.position).normalized;
+                        Vector3 targetDirection = new Vector3(dir.x, 0, dir.z);
+                        Quaternion targetRotation = Quaternion.LookRotation(targetDirection, Vector3.up);
+                        distText.transform.rotation = Quaternion.RotateTowards(distText.transform.rotation, targetRotation, 360);
+                    }
+                    else
+                    {
+                        myDistTag = Instantiate(distObject);
+                        myDistTag.transform.position = hit.point;
+                    }
+
                 }
 
             }
@@ -725,6 +773,14 @@ public class PlayerController : MonoBehaviour
 
         // Stop perlin noise, unless in FPP
         if (cameraMode != 1 && camNoise.m_FrequencyGain != 0) camNoise.m_FrequencyGain = 0;
+    }
+
+    void DrawLine(Vector3 start, Vector3 end)
+    {
+        GameObject myLine = Instantiate(distLine);
+        LineRenderer lr = myLine.GetComponent<LineRenderer>();
+        lr.SetPosition(0, start);
+        lr.SetPosition(1, end);
     }
 
     private void ZoomOut()

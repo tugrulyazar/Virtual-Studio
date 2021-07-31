@@ -12,8 +12,8 @@ GameObject:
   - component: {fileID: 5765231272675093738}
   - component: {fileID: 2126013495198307752}
   m_Layer: 0
-  m_Name: RedSphere
-  m_TagString: Untagged
+  m_Name: GreenSphere
+  m_TagString: DistObject
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -59,7 +59,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31c47c27af3bc8c408ca7a27698b41c0, type: 2}
+  - {fileID: 2100000, guid: 3c05798094e3e7f40a5a6a7595307332, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

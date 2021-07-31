@@ -6,6 +6,7 @@ TagManager:
   tags:
   - CinemachineTarget
   - PermObject
+  - DistObject
   layers:
   - Default
   - TransparentFX
