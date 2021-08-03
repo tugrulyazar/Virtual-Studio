@@ -4673,8 +4673,10 @@ MonoBehaviour:
   playerHead: {fileID: 2961576389726134638}
   moveSpeed: 2
   sprintSpeed: 6
+  flySpeed: 8
   speedChangeRate: 10
   jumpHeight: 1.2
+  flyJumpHeight: 1.2
   gravity: -15
   jumpTimeout: 0.5
   fallTimeout: 0.15
@@ -4687,7 +4689,7 @@ MonoBehaviour:
   FPPCamera: {fileID: 1790846300596152842}
   cinemachineCameraTarget: {fileID: 667237885853760529}
   rotationSmoothTime: 0.12
-  topClamp: 80
+  topClamp: 70
   bottomClamp: 70
   cameraAngleOverride: 0
   lockCameraPosition: 0

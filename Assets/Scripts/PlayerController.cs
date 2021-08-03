@@ -20,12 +20,16 @@ public class PlayerController : MonoBehaviour
     private float moveSpeed = 2.0f;
     [SerializeField] // Sprint speed of the character in m/s
     private float sprintSpeed = 5.335f;
+    [SerializeField] // Fly speed of the character in m/s
+    private float flySpeed = 8;
     [SerializeField] // Acceleration and deceleration
     private float speedChangeRate = 10.0f;
 
     [Header("Jump")]
     [SerializeField] // The height the player can jump
     private float jumpHeight = 1.2f;
+    [SerializeField] // The height the player jumps when initiating flight
+    private float flyJumpHeight = 2f;
     [SerializeField] // The character uses its own gravity value. The engine default is -9.81f
     private float gravity = -15.0f;
     [SerializeField] // Time required to pass before being able to jump again. Set to 0f to instantly jump again
@@ -184,7 +188,7 @@ public class PlayerController : MonoBehaviour
     private const float zoom_TRate = 4;
     private const float shoulderSwitch_TRate = 5;
     private const float lookTimeout = 3f;
-    
+
     // Dynamic targeting variables
     private Rig handRig;
     private RaycastHit hit;
@@ -206,10 +210,12 @@ public class PlayerController : MonoBehaviour
     private const float speedOffset = 0.1f;
 
     // States
-    private bool grounded = true;
-    private bool inAnimation = false;
-    private bool notLooking = false;
-    private bool zoomedIn = false;
+    private bool grounded;
+    private bool isFlying;
+    private bool inAnimation;
+    private bool inStaticAnimation;
+    private bool notLooking;
+    private bool zoomedIn;
 
     // Gizmo colors for editor
     private Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
@@ -266,7 +272,13 @@ public class PlayerController : MonoBehaviour
         cinemachineBrain = Camera.main.GetComponent<CinemachineBrain>();
         StartCoroutine(GetActiveCamera());
 
-        // 
+        // Set default states
+        grounded = true;
+        isFlying = false;
+        inAnimation = false;
+        inStaticAnimation = false;
+        notLooking = false;
+        zoomedIn = false;
 
         // Set active hand
         handRig = rightHandRig;
@@ -279,10 +291,19 @@ public class PlayerController : MonoBehaviour
     }
 
     private void Update()
-    {
-        GroundedCheck();
-        JumpAndGravity();
-        MovePlayer();
+    {  
+        if (!isFlying)
+        {
+            GroundedCheck();
+            JumpAndGravity();
+            MovePlayer();
+        }
+        if (isFlying)
+        {
+            FlyPlayer();
+        }
+
+
         MoveLookTarget();
         CheckTargetingStatus();
         ManageHead();
@@ -340,6 +361,12 @@ public class PlayerController : MonoBehaviour
                 {
                     animator.SetBool(animIDJump, true);
                 }
+            }
+
+            // Initiate flight if ready to jump
+            if (Input.GetKeyDown(KeyCode.Tab) && jumpTimeoutDelta <= 0.0f && !inAnimation)
+            {
+                StartCoroutine(InitiateFlight());
             }
 
             // Decrease timeout if not ready to jump
@@ -437,6 +464,28 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private IEnumerator InitiateFlight()
+    {
+        isFlying = true;
+        inAnimation = true;
+        animator.SetBool(animIDisFlying, true);
+
+        float currentPos = transform.position.y;
+
+        do
+        {
+            controller.Move(new Vector3(0, 3f, 0) * Time.deltaTime);
+            yield return null;
+        } while (transform.position.y < currentPos + flyJumpHeight) ;
+
+        inAnimation = false;
+    }
+
+    private void FlyPlayer()
+    {
+        targetSpeed = runPressed ? flySpeed : moveSpeed;
+    }
+
     private void MoveLookTarget()
     {
         // Simple move target according to camera while not validly aiming
@@ -456,14 +505,14 @@ public class PlayerController : MonoBehaviour
 
     private void ManagePointAndZoom()
     {
-        // Rotate to target on mouse press if not looking
+        // Rotate to target on mouse press if not looking or in animation
         if (Input.GetKeyDown(KeyCode.Mouse1) && notLooking && !inAnimation)
         {
             StartCoroutine(RotateToTarget(lookTarget));
         }
 
         // Zoom in
-        if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
+        if (Input.GetKey(KeyCode.Mouse1) && !notLooking && !inAnimation)
         {
             ActivateRig(handRig, handActivate_TRate);
             DisableCamToggle();
@@ -486,6 +535,7 @@ public class PlayerController : MonoBehaviour
                         myTag.transform.position = hit.point;
                     }
 
+                    // Open object context menu
                     //if (hit.transform.CompareTag("PermObject"))
                     //{
                     //    TagMenu.gameObject.SetActive(true);
@@ -669,24 +719,29 @@ public class PlayerController : MonoBehaviour
         // Cinemachine will follow this target
         cinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + cameraAngleOverride, cinemachineTargetYaw, 0.0f);
 
-        // First person character rotation
-        if (cameraMode == 1)
+        // Body rotation on ground
+        if (!isFlying)
         {
-            // Get rotation velocity
-            rotationVelocity = currentLook.x * RotationSpeed * Time.deltaTime;
-
-            // Rotate the player with the camera
-            transform.Rotate(Vector3.up * rotationVelocity);
-        }
-
-        // Third person delayed character rotation
-        if (cameraMode == 0)
-        {
-            if (lookTimeoutDelta < 0 && !inAnimation)
+            // First person constant rotation
+            if (cameraMode == 1)
             {
-                StartCoroutine(RotateToTarget(lookTarget));
+                // Get rotation velocity
+                rotationVelocity = currentLook.x * RotationSpeed * Time.deltaTime;
+
+                // Rotate the player with the camera
+                transform.Rotate(Vector3.up * rotationVelocity);
+            }
+
+            // Third person delayed character rotation
+            if (cameraMode == 0)
+            {
+                if (lookTimeoutDelta < 0 && !inAnimation)
+                {
+                    StartCoroutine(RotateToTarget(lookTarget));
+                }
             }
         }
+
     }
 
     private IEnumerator RotateToTarget(Transform target)
@@ -697,21 +752,21 @@ public class PlayerController : MonoBehaviour
         Vector3 targetDirection = new Vector3(dir.x, 0, dir.z);
         Quaternion targetRotation = Quaternion.LookRotation(targetDirection, Vector3.up);
 
-        if (angleDir == 1)
+        if (!isFlying)
         {
-            Debug.Log("left");
-            animator.SetBool(animIDturnLeft, true);
-            yield return new WaitForSeconds(0.3f);
-            animator.SetBool(animIDturnLeft, false);
+            if (angleDir == 1)
+            {
+                animator.SetBool(animIDturnLeft, true);
+                yield return new WaitForSeconds(0.3f);
+                animator.SetBool(animIDturnLeft, false);
+            }
+            else if (angleDir == -1)
+            {
+                animator.SetBool(animIDturnRight, true);
+                yield return new WaitForSeconds(0.3f);
+                animator.SetBool(animIDturnRight, false);
+            }
         }
-        else if (angleDir == -1)
-        {
-            Debug.Log("right");
-            animator.SetBool(animIDturnRight, true);
-            yield return new WaitForSeconds(0.3f);
-            animator.SetBool(animIDturnRight, false);
-        }
-
 
         do
         {
@@ -766,9 +821,9 @@ public class PlayerController : MonoBehaviour
         float angle = Vector3.Angle(heading, transform.forward);
         angleDir = AngleDir(transform.position, heading); // 1: left , -1: right
 
-        if (inAnimation)
+        if (inStaticAnimation)
         {
-            // If in animation, don't look
+            // If in static animation, don't look
             notLooking = true;
         }
         else
@@ -1037,16 +1092,18 @@ public class PlayerController : MonoBehaviour
     private void StartLoopAnimation(int animID)
     {
         inAnimation = true;
+        inStaticAnimation = true;
         MovementDisable();
         animator.SetBool(animID, true);
     }
 
     private IEnumerator EndLoopAnimation(int animID)
     {
-        animator.SetBool(animIDisDancing, false);
+        animator.SetBool(animID, false);
         yield return new WaitForSeconds(3);
         MovementEnable();
         inAnimation = false;
+        inStaticAnimation = false;
     }
 
     private void MovementDisable()
