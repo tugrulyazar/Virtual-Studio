@@ -5,41 +5,41 @@ using UnityEngine.Rendering;
 using UnityEngine.Animations.Rigging;
 using Cinemachine;
 using TMPro;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
     [Header("Player")]
-    [SerializeField] // Move speed of the character in m/s
-    private float MoveSpeed = 2.0f;
-    [SerializeField] // Sprint speed of the character in m/s
-    private float SprintSpeed = 5.335f;
-
-    [Space(10)]
-    [SerializeField] // How fast the character turns to face movement direction
-    [Range(0.0f, 0.3f)]
-    private float RotationSmoothTime = 0.12f;
-    [SerializeField] // Acceleration and deceleration
-    private float SpeedChangeRate = 10.0f;
-
-    [Space(10)]
-    [SerializeField] // The height the player can jump
-    private float JumpHeight = 1.2f;
-    [SerializeField] // The character uses its own gravity value. The engine default is -9.81f
-    private float Gravity = -15.0f;
-    [SerializeField] // Time required to pass before being able to jump again. Set to 0f to instantly jump again
-    private float JumpTimeout = 0.50f;
-    [SerializeField] // Time required to pass before entering the fall state. Useful for walking down stairs
-    private float FallTimeout = 0.15f;
-
-    [Space(10)]
     [SerializeField] // Player model
-    private SkinnedMeshRenderer MeshRenderer;
+    private SkinnedMeshRenderer meshRenderer;
+    [SerializeField] // Player head transform
+    private Transform playerHead;
+
+    [Header("Movement")]
+    [SerializeField] // Move speed of the character in m/s
+    private float moveSpeed = 2.0f;
+    [SerializeField] // Sprint speed of the character in m/s
+    private float sprintSpeed = 5.335f;
+    [SerializeField] // Acceleration and deceleration
+    private float speedChangeRate = 10.0f;
+
+    [Header("Jump")]
+    [SerializeField] // The height the player can jump
+    private float jumpHeight = 1.2f;
+    [SerializeField] // The character uses its own gravity value. The engine default is -9.81f
+    private float gravity = -15.0f;
+    [SerializeField] // Time required to pass before being able to jump again. Set to 0f to instantly jump again
+    private float jumpTimeout = 0.50f;
+    [SerializeField] // Time required to pass before entering the fall state. Useful for walking down stairs
+    private float fallTimeout = 0.15f;
+
+    [Space(10)]
     [SerializeField] // Useful for rough ground
-    private float GroundedOffset = -0.14f;
+    private float groundedOffset = -0.14f;
     [SerializeField] // The radius of the grounded check. Should match the radius of the CharacterController
-    private float GroundedRadius = 0.28f;
+    private float groundedRadius = 0.28f;
     [SerializeField] // What layers the character uses as ground
-    private LayerMask GroundLayers;
+    private LayerMask groundLayers;
 
     [Header("Cinemachine")]
     [SerializeField] // Third person camera object
@@ -47,45 +47,31 @@ public class PlayerController : MonoBehaviour
     [SerializeField] // First person camera object
     private GameObject FPPCamera;
     [SerializeField] // The follow target set in the Cinemachine Virtual Camera that the camera will follow
-    private GameObject CinemachineCameraTarget;
+    private GameObject cinemachineCameraTarget;
+
+    [SerializeField] // How fast the character turns to face movement direction
+    [Range(0.0f, 0.3f)]
+    private float rotationSmoothTime = 0.12f;
 
     [Space(10)]
     [SerializeField] // How far in degrees can you move the camera up
-    private float TopClamp = 60.0f;
+    private float topClamp = 60.0f;
     [SerializeField] // How far in degrees can you move the camera down
-    private float BottomClamp = 60.0f;
+    private float bottomClamp = 60.0f;
     [SerializeField] // Additional degress to override the camera. Useful for fine tuning camera position when locked
-    private float CameraAngleOverride = 0.0f;
+    private float cameraAngleOverride = 0.0f;
     [SerializeField]  // For locking the camera position on all axis
-    private bool LockCameraPosition = false;
+    private bool lockCameraPosition = false;
 
     [Header("Pointing")]
-    [SerializeField]
-    private Transform lookTarget;
-    [SerializeField]
-    private Transform playerHead;
-    [SerializeField]
-    private Transform playerPos;
-    [SerializeField]
-    private GameObject tagObject;
-    [SerializeField]
-    private GameObject permObject;
-    [SerializeField]
-    private GameObject distObject;
-    [SerializeField]
-    private GameObject distLine;
-    [SerializeField]
-    private GameObject textObject;
-    [SerializeField]
-    private GameObject crosshair;
-    [SerializeField]
+    [SerializeField] // Head rig for looking at
     private Rig headRig;
-    [SerializeField]
+    [SerializeField] // Right hand rig for pointing
     private Rig rightHandRig;
-    [SerializeField]
+    [SerializeField] // Left hand rig for pointing
     private Rig leftHandRig;
-    [SerializeField]
-    private LayerMask layerMask;
+    [SerializeField] // Target for looking and pointing
+    private Transform lookTarget;
 
     [Space(10)]
     [SerializeField]
@@ -97,6 +83,24 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     [Range(5, 100)]
     private float raycastDistance = 20; // Raycast max distance for pointing
+    [SerializeField] // Raycast layer mask
+    private LayerMask raycastLayerMask;
+
+    [Header("Objects")]
+    [SerializeField] // Pointing tag object
+    private GameObject tagObject;
+    [SerializeField] // Pointing permanent tag object
+    private GameObject permObject;
+    [SerializeField] // Distance measuring tag object
+    private GameObject distObject;
+    [SerializeField] // Distance measuring line object
+    private GameObject distLine;
+    [SerializeField] // Distance text object
+    private GameObject textObject;
+    [SerializeField] // Pointing mode crosshair
+    private GameObject crosshair;
+    [SerializeField] // Permanent tag object context menu
+    private Image tagMenu;
 
     // Animator component
     private Animator animator;
@@ -111,78 +115,101 @@ public class PlayerController : MonoBehaviour
     private int animIDisFlying;
     private int animIDisWaving;
     private int animIDisDancing;
+    private int animIDturnLeft;
+    private int animIDturnRight;
 
     // Input system
     private PlayerInput input;
     private Vector2 currentMovement;
     private Vector2 currentLook;
+
     private bool movementPressed;
     private bool lookPressed;
     private bool runPressed;
     private bool jumpPressed;
     private bool camTogglePressed;
     private bool analogMovement;
-    private bool inAnimation = false;
-
-    // Character controller
-    private CharacterController controller;
-
-    // Camera and cinemachine
-    private CinemachineBrain cinemachineBrain;
-    private CinemachineVirtualCamera activeCam;
-    private Cinemachine3rdPersonFollow camTPF;
-    private CinemachineBasicMultiChannelPerlin camNoise;
-    private Transform mainCamera;
-    private float cinemachineTargetYaw;
-    private float cinemachineTargetPitch;
-    private int cameraMode;
-    private bool CameraCoroutineInProgress;
-    private float cameraFov;
-    private float cameraDistance;
-    private float zoomFov = 30;
-    private float zoomOffset = 2;
-    private float originalFov;
-    private float zoomDistance;
-    private float originalDistance;
-    private float shoulderSide;
 
     // Player
     private float speed;
     private float animationBlend;
     private float targetRotation = 0.0f;
+    private float targetSpeed;
     private float rotationVelocity;
     private float verticalVelocity;
     private float terminalVelocity = 53.0f;
-    private float targetSpeed;
-    private bool Grounded = true;
 
-    // Head look, hand point and zoom
-    private float transitionRate = 2.0f;
-    private bool notLooking = false;
-    private bool rotateInProgress = false;
-    private bool zoomedIn;
-    private Vector3 heading;
+    // Character controller
+    private CharacterController controller;
+
+    // Cinemachine
+    private Transform mainCamera;
+    private CinemachineBrain cinemachineBrain;
+    private CinemachineVirtualCamera activeCam;
+    private Cinemachine3rdPersonFollow camTPF;
+    private CinemachineBasicMultiChannelPerlin camNoise;
+
+    private float cinemachineTargetYaw;
+    private float cinemachineTargetPitch;
+
+    // Camera fov and distances
+    private float originalFov;
+    private float originalDistance;
+
+    private const float zoomFov = 30;
+    private const float minZoomOffset = 2f;
+    private const float maxZoomOffset = 6f;
+
+    private const float ZoomRotationSpeed = 0.3f;
+    private const float NormalRotationSpeed = 1f;
+
+    // Dynamic camera variables
+    private float cameraFov;
+    private float cameraDistance;
+    private float zoomDistance;
+    private float zoomOffset;
+    private float shoulderSide;
     private float RotationSpeed = 1.0f;
+
+    // Camera states
+    private int cameraMode;
+    private bool CameraCoroutineInProgress;
+
+    // Targeting: head look, hand point and zoom
+    private const float handActivate_TRate = 6;
+    private const float handDeactivate_TRate = 8;
+    private const float headActivate_TRate = 2;
+    private const float headDeactivate_TRate = 1;
+    private const float lookTarget_TRate = 5;
+    private const float zoom_TRate = 4;
+    private const float shoulderSwitch_TRate = 5;
     private const float lookTimeout = 3f;
-    private float lookTimeoutDelta;
-    private const float holdTimeout = 3f;
-    private float holdTimeoutDelta;
+    
+    // Dynamic targeting variables
+    private Rig handRig;
     private RaycastHit hit;
+    private float angleDir;
+
+    // Tag objects
+    private const float deleteHoldTimeout = 3f;
     GameObject myTag;
     GameObject myDistTag;
-    private Rig handRig;
 
     // Timeout deltatime
     private float jumpTimeoutDelta;
     private float fallTimeoutDelta;
+    private float lookTimeoutDelta;
+    private float holdTimeoutDelta;
 
     // Constant variables
-    private const float threshold = 0.01f;
+    private const float camRotateThreshold = 0.01f;
     private const float speedOffset = 0.1f;
-    private const float ZoomRotationSpeed = 0.3f;
-    private const float NormalRotationSpeed = 1f;
-    private const float minZoomOffset = 2f;
-    private const float maxZoomOffset = 6f;
+
+    // States
+    private bool grounded = true;
+    private bool inAnimation = false;
+    private bool notLooking = false;
+    private bool zoomedIn = false;
 
     // Gizmo colors for editor
     private Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
@@ -239,14 +266,16 @@ public class PlayerController : MonoBehaviour
         cinemachineBrain = Camera.main.GetComponent<CinemachineBrain>();
         StartCoroutine(GetActiveCamera());
 
+        // 
+
         // Set active hand
         handRig = rightHandRig;
 
         // Reset timers on start
-        jumpTimeoutDelta = JumpTimeout;
-        fallTimeoutDelta = FallTimeout;
+        jumpTimeoutDelta = jumpTimeout;
+        fallTimeoutDelta = fallTimeout;
         lookTimeoutDelta = lookTimeout;
-        holdTimeoutDelta = holdTimeout;
+        holdTimeoutDelta = deleteHoldTimeout;
     }
 
     private void Update()
@@ -259,45 +288,33 @@ public class PlayerController : MonoBehaviour
         ManageHead();
         ManagePointAndZoom();
         ControlAnimations();
-        CameraToggle();
     }
 
     private void LateUpdate()
     {
         CameraRotation();
-    }
-
-    private void AssignAnimationIDs()
-    {
-        animIDSpeed = Animator.StringToHash("Speed");
-        animIDGrounded = Animator.StringToHash("Grounded");
-        animIDJump = Animator.StringToHash("Jump");
-        animIDFreeFall = Animator.StringToHash("FreeFall");
-        animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
-        animIDisFlying = Animator.StringToHash("isFlying");
-        animIDisWaving = Animator.StringToHash("isWaving");
-        animIDisDancing = Animator.StringToHash("isDancing");
+        CameraToggle();
     }
 
     private void GroundedCheck()
     {
         // Create sphere and check collision
-        Vector3 spherePosition = new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z);
-        Grounded = Physics.CheckSphere(spherePosition, GroundedRadius, GroundLayers, QueryTriggerInteraction.Ignore);
+        Vector3 spherePosition = new Vector3(transform.position.x, transform.position.y - groundedOffset, transform.position.z);
+        grounded = Physics.CheckSphere(spherePosition, groundedRadius, groundLayers, QueryTriggerInteraction.Ignore);
 
         // Update animator if using character
         if (hasAnimator)
         {
-            animator.SetBool(animIDGrounded, Grounded);
+            animator.SetBool(animIDGrounded, grounded);
         }
     }
 
     private void JumpAndGravity()
     {
-        if (Grounded)
+        if (grounded)
         {
             // Reset the fall timeout timer if grounded
-            fallTimeoutDelta = FallTimeout;
+            fallTimeoutDelta = fallTimeout;
 
             // Update animator if using character
             if (hasAnimator)
@@ -316,7 +333,7 @@ public class PlayerController : MonoBehaviour
             if (jumpPressed && jumpTimeoutDelta <= 0.0f && !inAnimation)
             {
                 // The square root of H * -2 * G = how much velocity needed to reach desired height
-                verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
+                verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
 
                 // Update animator if using character
                 if (hasAnimator)
@@ -334,7 +351,7 @@ public class PlayerController : MonoBehaviour
         else // If not grounded, in the air
         {
             // Reset the jump timeout as the character is in the air
-            jumpTimeoutDelta = JumpTimeout;
+            jumpTimeoutDelta = jumpTimeout;
 
             // Fall timeout for short falls
             if (fallTimeoutDelta >= 0.0f)
@@ -354,14 +371,14 @@ public class PlayerController : MonoBehaviour
         // Apply gravity over time if under terminal velocity (multiply by delta time twice to linearly speed up over time)
         if (verticalVelocity < terminalVelocity)
         {
-            verticalVelocity += Gravity * Time.deltaTime;
+            verticalVelocity += gravity * Time.deltaTime;
         }
     }
 
     private void MovePlayer()
     {
         // Set target speed based on move speed, sprint speed and if sprint is pressed
-        targetSpeed = runPressed ? SprintSpeed : MoveSpeed;
+        targetSpeed = runPressed ? sprintSpeed : moveSpeed;
 
         // If there is no input, set the target speed to 0
         if (currentMovement == Vector2.zero) targetSpeed = 0.0f;
@@ -380,7 +397,7 @@ public class PlayerController : MonoBehaviour
         {
             // Creates curved result rather than a linear one giving a more organic speed change
             // Note T in Lerp is clamped, so we don't need to clamp our speed
-            speed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed * inputMagnitude, Time.deltaTime * SpeedChangeRate);
+            speed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed * inputMagnitude, Time.deltaTime * speedChangeRate);
 
             // Round speed to 3 decimal places
             speed = Mathf.Round(speed * 1000f) / 1000f;
@@ -391,7 +408,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // Animation blend
-        animationBlend = Mathf.Lerp(animationBlend, targetSpeed, Time.deltaTime * SpeedChangeRate);
+        animationBlend = Mathf.Lerp(animationBlend, targetSpeed, Time.deltaTime * speedChangeRate);
 
         // Normalize input direction
         Vector3 inputDirection = new Vector3(currentMovement.x, 0.0f, currentMovement.y).normalized;
@@ -401,7 +418,7 @@ public class PlayerController : MonoBehaviour
         if (currentMovement != Vector2.zero)
         {
             targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg + mainCamera.eulerAngles.y;
-            float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref rotationVelocity, RotationSmoothTime);
+            float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref rotationVelocity, rotationSmoothTime);
 
             // Rotate to face input direction relative to camera position
             transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
@@ -430,7 +447,7 @@ public class PlayerController : MonoBehaviour
 
             if (prevPos != nextPos)
             {
-                prevPos = Vector3.Lerp(prevPos, nextPos, Time.deltaTime * transitionRate * 2);
+                prevPos = Vector3.Lerp(prevPos, nextPos, Time.deltaTime * lookTarget_TRate);
             }
 
             lookTarget.position = prevPos;
@@ -440,7 +457,7 @@ public class PlayerController : MonoBehaviour
     private void ManagePointAndZoom()
     {
         // Rotate to target on mouse press if not looking
-        if (Input.GetKeyDown(KeyCode.Mouse1) && notLooking && !rotateInProgress)
+        if (Input.GetKeyDown(KeyCode.Mouse1) && notLooking && !inAnimation)
         {
             StartCoroutine(RotateToTarget(lookTarget));
         }
@@ -448,15 +465,14 @@ public class PlayerController : MonoBehaviour
         // Zoom in
         if (Input.GetKey(KeyCode.Mouse1) && !notLooking)
         {
-            ActivateRig(handRig, 3);
+            ActivateRig(handRig, handActivate_TRate);
             DisableCamToggle();
             ZoomIn();
 
             // Move the pointing to the center of the screen
-            if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance, layerMask))
+            if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance, raycastLayerMask))
             {
-                lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * transitionRate * 3);
-                Debug.Log(holdTimeoutDelta);
+                lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * lookTarget_TRate);
                 // Place tag at pointed location
                 if (Input.GetKeyDown(KeyCode.Mouse0))
                 {
@@ -469,6 +485,11 @@ public class PlayerController : MonoBehaviour
                     {
                         myTag.transform.position = hit.point;
                     }
+
+                    //if (hit.transform.CompareTag("PermObject"))
+                    //{
+                    //    TagMenu.gameObject.SetActive(true);
+                    //}
                 }
 
                 // Place perm tag at pointed location
@@ -515,7 +536,6 @@ public class PlayerController : MonoBehaviour
                             Vector3 mid = Vector3.Lerp(start, end, 0.5f);
                             float distance = Vector3.Distance(start, end);
                             distance = Mathf.Round(distance * 100f) / 100f;
-                            Color color = Color.yellow;
 
                             // Draw line and place text
                             DrawLine(start, end);
@@ -537,39 +557,11 @@ public class PlayerController : MonoBehaviour
                             myDistTag.transform.position = hit.point;
                         }
                     }
-
                     // Reset timer
-                    holdTimeoutDelta = holdTimeout;
-
+                    holdTimeoutDelta = deleteHoldTimeout;
                 }
-
-                // Destroy distance texts and lines
-                if (Input.GetKey(KeyCode.C))
-                {
-                    // Decrease timer while held
-                    if (holdTimeoutDelta >= 0.0f)
-                    {
-                        holdTimeoutDelta -= Time.deltaTime;
-                    }
-
-                    // Destroy distance tags, texts and lines
-                    else
-                    {
-                        GameObject[] distPermObjects = GameObject.FindGameObjectsWithTag("DistPermObject");
-                        GameObject[] distObjects = GameObject.FindGameObjectsWithTag("DistObject");
-                        var objList = new List<GameObject>();
-                        objList.AddRange(distPermObjects);
-                        objList.AddRange(distObjects);
-
-                        foreach (GameObject obj in objList)
-                        {
-                            Destroy(obj);
-                        }
-                    }
-                    
-                }
-
             }
+
             // If you're not clicking to a valid location
             else if (Input.GetKeyDown(KeyCode.Mouse0))
             {
@@ -583,6 +575,31 @@ public class PlayerController : MonoBehaviour
                 foreach (GameObject obj in permObjects)
                 {
                     Destroy(obj);
+                }
+            }
+
+            // Destroy distance texts and lines
+            if (Input.GetKey(KeyCode.C))
+            {
+                // Decrease timer while held
+                if (holdTimeoutDelta >= 0.0f)
+                {
+                    holdTimeoutDelta -= Time.deltaTime;
+                }
+
+                // Destroy distance tags, texts and lines
+                else
+                {
+                    GameObject[] distPermObjects = GameObject.FindGameObjectsWithTag("DistPermObject");
+                    GameObject[] distObjects = GameObject.FindGameObjectsWithTag("DistObject");
+                    var objList = new List<GameObject>();
+                    objList.AddRange(distPermObjects);
+                    objList.AddRange(distObjects);
+
+                    foreach (GameObject obj in objList)
+                    {
+                        Destroy(obj);
+                    }
                 }
             }
 
@@ -628,7 +645,7 @@ public class PlayerController : MonoBehaviour
                 zoomDistance = 0;
             }
 
-            DeactivateRig(handRig, 4);
+            DeactivateRig(handRig, handDeactivate_TRate);
             EnableCamToggle();
             ZoomOut();
         }
@@ -637,7 +654,7 @@ public class PlayerController : MonoBehaviour
     private void CameraRotation()
     {
         // If there is an input and camera position is not fixed
-        if (currentLook.sqrMagnitude >= threshold && !LockCameraPosition)
+        if (currentLook.sqrMagnitude >= camRotateThreshold && !lockCameraPosition)
         {
             cinemachineTargetYaw += currentLook.x * Time.deltaTime * RotationSpeed;
             cinemachineTargetPitch += currentLook.y * Time.deltaTime * RotationSpeed;
@@ -647,10 +664,10 @@ public class PlayerController : MonoBehaviour
         cinemachineTargetYaw = ClampAngle(cinemachineTargetYaw, float.MinValue, float.MaxValue);
 
         // Clamp pitch rotation
-        cinemachineTargetPitch = ClampAngle(cinemachineTargetPitch, -TopClamp, BottomClamp);
+        cinemachineTargetPitch = ClampAngle(cinemachineTargetPitch, -topClamp, bottomClamp);
 
         // Cinemachine will follow this target
-        CinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + CameraAngleOverride, cinemachineTargetYaw, 0.0f);
+        cinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + cameraAngleOverride, cinemachineTargetYaw, 0.0f);
 
         // First person character rotation
         if (cameraMode == 1)
@@ -665,7 +682,7 @@ public class PlayerController : MonoBehaviour
         // Third person delayed character rotation
         if (cameraMode == 0)
         {
-            if (lookTimeoutDelta < 0 && !rotateInProgress)
+            if (lookTimeoutDelta < 0 && !inAnimation)
             {
                 StartCoroutine(RotateToTarget(lookTarget));
             }
@@ -674,21 +691,37 @@ public class PlayerController : MonoBehaviour
 
     private IEnumerator RotateToTarget(Transform target)
     {
-        rotateInProgress = true;
+        inAnimation = true;
         MovementDisable();
         Vector3 dir = (target.transform.position - transform.position).normalized;
         Vector3 targetDirection = new Vector3(dir.x, 0, dir.z);
         Quaternion targetRotation = Quaternion.LookRotation(targetDirection, Vector3.up);
 
+        if (angleDir == 1)
+        {
+            Debug.Log("left");
+            animator.SetBool(animIDturnLeft, true);
+            yield return new WaitForSeconds(0.3f);
+            animator.SetBool(animIDturnLeft, false);
+        }
+        else if (angleDir == -1)
+        {
+            Debug.Log("right");
+            animator.SetBool(animIDturnRight, true);
+            yield return new WaitForSeconds(0.3f);
+            animator.SetBool(animIDturnRight, false);
+        }
+
+
         do
         {
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, 3);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, Time.deltaTime * 180);
             yield return null;
         } while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f);
 
         lookTimeoutDelta = lookTimeout;
         MovementEnable();
-        rotateInProgress = false;
+        inAnimation = false;
     }
 
     private void CameraToggle()
@@ -728,9 +761,10 @@ public class PlayerController : MonoBehaviour
     private void CheckTargetingStatus()
     {
         // Get the angle between the camera and player heading and target position in left/right
-        heading = lookTarget.position - playerPos.position;
-        float angle = Vector3.Angle(heading, playerPos.forward);
-        float angleDir = AngleDir(playerPos.position, heading); // 1: left , -1: right
+        Vector3 flatTargetPos = new Vector3(lookTarget.position.x, transform.position.y, lookTarget.position.z);
+        Vector3 heading = flatTargetPos - transform.position;
+        float angle = Vector3.Angle(heading, transform.forward);
+        angleDir = AngleDir(transform.position, heading); // 1: left , -1: right
 
         if (inAnimation)
         {
@@ -768,11 +802,11 @@ public class PlayerController : MonoBehaviour
         // Decrease head constraint weights over time, disable unnecessary infinite lerping
         if (notLooking)
         {
-            DeactivateRig(headRig, 1);
+            DeactivateRig(headRig, headActivate_TRate);
         }
         else if (!notLooking)
         {
-            ActivateRig(headRig, 1);
+            ActivateRig(headRig, headDeactivate_TRate);
         }
     }
 
@@ -781,7 +815,7 @@ public class PlayerController : MonoBehaviour
         if (rig.weight != 1)
         {
             // Lerp rig constraint weights
-            rig.weight = (rig.weight > 0.99) ? 1 : Mathf.Lerp(rig.weight, 1, Time.deltaTime * transitionRate * rate);
+            rig.weight = (rig.weight > 0.99) ? 1 : Mathf.Lerp(rig.weight, 1, Time.deltaTime * rate);
         }
     }
 
@@ -790,7 +824,7 @@ public class PlayerController : MonoBehaviour
         if (rig.weight != 0)
         {
             // Lerp rig constraint weights
-            rig.weight = (rig.weight < 0.01) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * transitionRate * rate);
+            rig.weight = (rig.weight < 0.01) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * rate);
         }
     }
 
@@ -807,12 +841,12 @@ public class PlayerController : MonoBehaviour
         if (cameraFov != zoomFov)
         {
             // Lerp camera fov to zoom fov
-            cameraFov = (cameraFov < zoomFov + 0.01f) ? zoomFov : Mathf.Lerp(cameraFov, zoomFov, Time.deltaTime * transitionRate * 2);
+            cameraFov = (cameraFov < zoomFov + 0.01f) ? zoomFov : Mathf.Lerp(cameraFov, zoomFov, Time.deltaTime * zoom_TRate);
             activeCam.m_Lens.FieldOfView = cameraFov;
         }
 
         // Lerp camera distance to zoom distance, kept dynamic because of scroll
-        cameraDistance = (cameraDistance < zoomDistance + 0.01f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * transitionRate * 2);
+        cameraDistance = (cameraDistance < zoomDistance + 0.01f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * zoom_TRate);
         camTPF.CameraDistance = cameraDistance;
 
         // Change sensitivity
@@ -820,14 +854,6 @@ public class PlayerController : MonoBehaviour
 
         // Stop perlin noise, unless in FPP
         if (cameraMode != 1 && camNoise.m_FrequencyGain != 0) camNoise.m_FrequencyGain = 0;
-    }
-
-    void DrawLine(Vector3 start, Vector3 end)
-    {
-        GameObject myLine = Instantiate(distLine);
-        LineRenderer lr = myLine.GetComponent<LineRenderer>();
-        lr.SetPosition(0, start);
-        lr.SetPosition(1, end);
     }
 
     private void ZoomOut()
@@ -844,14 +870,14 @@ public class PlayerController : MonoBehaviour
         if (cameraFov != originalFov)
         {
             // Lerp camera fov to original
-            cameraFov = (cameraFov > originalFov - 0.01f) ? originalFov : Mathf.Lerp(cameraFov, originalFov, Time.deltaTime * transitionRate * 2);
+            cameraFov = (cameraFov > originalFov - 0.01f) ? originalFov : Mathf.Lerp(cameraFov, originalFov, Time.deltaTime * zoom_TRate);
             activeCam.m_Lens.FieldOfView = cameraFov;
         }
 
         if (cameraDistance != originalDistance)
         {
             // Lerp camera distance to original
-            cameraDistance = (cameraDistance > originalDistance - 0.01f) ? originalDistance : Mathf.Lerp(cameraDistance, originalDistance, Time.deltaTime * transitionRate * 2);
+            cameraDistance = (cameraDistance > originalDistance - 0.01f) ? originalDistance : Mathf.Lerp(cameraDistance, originalDistance, Time.deltaTime * zoom_TRate);
             camTPF.CameraDistance = cameraDistance;
         }
 
@@ -862,23 +888,12 @@ public class PlayerController : MonoBehaviour
         if (cameraMode != 1 && camNoise.m_FrequencyGain != 0.3f) camNoise.m_FrequencyGain = 0.3f;
     }
 
-    private float AngleDir(Vector3 fwd, Vector3 targetDir)
+    void DrawLine(Vector3 start, Vector3 end)
     {
-        Vector3 perp = Vector3.Cross(fwd, targetDir);
-        float dir = Vector3.Dot(perp, Vector3.up);
-
-        if (dir > 0f)
-        {
-            return 1f;
-        }
-        else if (dir < 0f)
-        {
-            return -1f;
-        }
-        else
-        {
-            return 0f;
-        }
+        GameObject myLine = Instantiate(distLine);
+        LineRenderer lr = myLine.GetComponent<LineRenderer>();
+        lr.SetPosition(0, start);
+        lr.SetPosition(1, end);
     }
 
     private IEnumerator CameraChange()
@@ -894,7 +909,7 @@ public class PlayerController : MonoBehaviour
             yield return new WaitForSeconds(0.2f);
             // Resume perlin noise
             if (camNoise.m_FrequencyGain != 0.3f) camNoise.m_FrequencyGain = 0.3f;
-            MeshRenderer.shadowCastingMode = ShadowCastingMode.On;
+            meshRenderer.shadowCastingMode = ShadowCastingMode.On;
         }
         if (cameraMode == 1)
         {
@@ -906,7 +921,7 @@ public class PlayerController : MonoBehaviour
             yield return new WaitForSeconds(0.8f);
             // Stop perlin noise
             if (camNoise.m_FrequencyGain != 0) camNoise.m_FrequencyGain = 0;
-            MeshRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+            meshRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
         }
         yield return new WaitForSeconds(1.0f);
         CameraCoroutineInProgress = false;
@@ -933,10 +948,10 @@ public class PlayerController : MonoBehaviour
         // Lerp shoulder side
         do
         {
-            camSide = Mathf.Lerp(camSide, targetSide, Time.deltaTime * transitionRate * 2);
+            camSide = Mathf.Lerp(camSide, targetSide, Time.deltaTime * shoulderSwitch_TRate);
             camTPF.CameraSide = camSide;
             yield return null;
-        } while (Mathf.Abs(camSide - targetSide) > 0.001f);
+        } while (Mathf.Abs(camSide - targetSide) > 0.01f);
 
         // Zero side
         camTPF.CameraSide = targetSide;
@@ -967,6 +982,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // Set dynamic camera values
+        zoomOffset = minZoomOffset;
         cameraFov = originalFov;
         cameraDistance = originalDistance;
     }
@@ -974,7 +990,7 @@ public class PlayerController : MonoBehaviour
     private void ControlAnimations()
     {
         // Play animations, only if grounded and not already in animation
-        if (Grounded && !inAnimation)
+        if (grounded && !inAnimation)
         {
             // Wave animation one shot
             if (Input.GetKeyDown(KeyCode.H))
@@ -1053,6 +1069,39 @@ public class PlayerController : MonoBehaviour
         return Mathf.Clamp(lfAngle, lfMin, lfMax);
     }
 
+    private float AngleDir(Vector3 fwd, Vector3 targetDir)
+    {
+        Vector3 perp = Vector3.Cross(fwd, targetDir);
+        float dir = Vector3.Dot(perp, Vector3.up);
+
+        if (dir > 0f)
+        {
+            return 1f;
+        }
+        else if (dir < 0f)
+        {
+            return -1f;
+        }
+        else
+        {
+            return 0f;
+        }
+    }
+
+    private void AssignAnimationIDs()
+    {
+        animIDSpeed = Animator.StringToHash("Speed");
+        animIDGrounded = Animator.StringToHash("Grounded");
+        animIDJump = Animator.StringToHash("Jump");
+        animIDFreeFall = Animator.StringToHash("FreeFall");
+        animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
+        animIDisFlying = Animator.StringToHash("isFlying");
+        animIDisWaving = Animator.StringToHash("isWaving");
+        animIDisDancing = Animator.StringToHash("isDancing");
+        animIDturnLeft = Animator.StringToHash("turnLeft");
+        animIDturnRight = Animator.StringToHash("turnRight");
+    }
+
     private void OnEnable()
     {
         // Enable input when character is enabled
@@ -1068,10 +1117,10 @@ public class PlayerController : MonoBehaviour
     private void OnDrawGizmosSelected()
     {
         // Draw grounded gizmo
-        if (Grounded) Gizmos.color = transparentGreen;
+        if (grounded) Gizmos.color = transparentGreen;
         else Gizmos.color = transparentRed;
 
         // When selected, draw a gizmo in the position of, and matching radius of, the grounded collider
-        Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z), GroundedRadius);
+        Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - groundedOffset, transform.position.z), groundedRadius);
     }
 }
