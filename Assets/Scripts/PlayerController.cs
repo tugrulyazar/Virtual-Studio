@@ -195,7 +195,7 @@ public class PlayerController : MonoBehaviour
     private float angleDir;
 
     // Tag objects
-    private const float deleteHoldTimeout = 3f;
+    private const float deleteHoldTimeout = 2f;
     GameObject myTag;
     GameObject myDistTag;
 
@@ -214,6 +214,7 @@ public class PlayerController : MonoBehaviour
     private bool isFlying;
     private bool inAnimation;
     private bool inStaticAnimation;
+    private bool isTargetValid;
     private bool notLooking;
     private bool zoomedIn;
 
@@ -277,6 +278,7 @@ public class PlayerController : MonoBehaviour
         isFlying = false;
         inAnimation = false;
         inStaticAnimation = false;
+        isTargetValid = false;
         notLooking = false;
         zoomedIn = false;
 
@@ -291,7 +293,7 @@ public class PlayerController : MonoBehaviour
     }
 
     private void Update()
-    {  
+    {
         if (!isFlying)
         {
             GroundedCheck();
@@ -302,7 +304,6 @@ public class PlayerController : MonoBehaviour
         {
             FlyPlayer();
         }
-
 
         MoveLookTarget();
         CheckTargetingStatus();
@@ -410,14 +411,14 @@ public class PlayerController : MonoBehaviour
         // If there is no input, set the target speed to 0
         if (currentMovement == Vector2.zero) targetSpeed = 0.0f;
 
-        // Reference to the players current horizontal velocity
-        float currentHorizontalSpeed = new Vector3(controller.velocity.x, 0.0f, controller.velocity.z).magnitude;
-
-        // Check if movement is analog - between 0 and 1
+        // Check if movement is analog (for controller input) - between 0 and 1
         analogMovement = (currentMovement.x > 0f && currentMovement.x < 1.0f) || (currentMovement.y > 0f && currentMovement.y < 1.0f);
 
         // If the movement isn't analog, then make the magnitude 1
         float inputMagnitude = analogMovement ? currentMovement.magnitude : 1f;
+
+        // Reference to the players current horizontal velocity
+        float currentHorizontalSpeed = new Vector3(controller.velocity.x, 0.0f, controller.velocity.z).magnitude;
 
         // Accelerate or decelerate to target speed
         if (currentHorizontalSpeed < targetSpeed - speedOffset || currentHorizontalSpeed > targetSpeed + speedOffset)
@@ -440,7 +441,6 @@ public class PlayerController : MonoBehaviour
         // Normalize input direction
         Vector3 inputDirection = new Vector3(currentMovement.x, 0.0f, currentMovement.y).normalized;
 
-        // Third person move
         // If there is a move input rotate player when the player is moving
         if (currentMovement != Vector2.zero)
         {
@@ -476,7 +476,7 @@ public class PlayerController : MonoBehaviour
         {
             controller.Move(new Vector3(0, 3f, 0) * Time.deltaTime);
             yield return null;
-        } while (transform.position.y < currentPos + flyJumpHeight) ;
+        } while (transform.position.y < currentPos + flyJumpHeight);
 
         inAnimation = false;
     }
@@ -488,11 +488,11 @@ public class PlayerController : MonoBehaviour
 
     private void MoveLookTarget()
     {
-        // Simple move target according to camera while not validly aiming
-        if (!zoomedIn || !Physics.Raycast(mainCamera.position, mainCamera.forward, raycastDistance))
+        // Simple move target according to camera while not zoomed in or validly aiming
+        if (!zoomedIn || !isTargetValid)
         {
             Vector3 prevPos = lookTarget.position;
-            Vector3 nextPos = playerHead.position + mainCamera.forward * targetDistance;
+            Vector3 nextPos = playerHead.position + (mainCamera.forward * targetDistance);
 
             if (prevPos != nextPos)
             {
@@ -521,6 +521,7 @@ public class PlayerController : MonoBehaviour
             // Move the pointing to the center of the screen
             if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance, raycastLayerMask))
             {
+                isTargetValid = true;
                 lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * lookTarget_TRate);
                 // Place tag at pointed location
                 if (Input.GetKeyDown(KeyCode.Mouse0))
@@ -611,9 +612,13 @@ public class PlayerController : MonoBehaviour
                     holdTimeoutDelta = deleteHoldTimeout;
                 }
             }
+            else
+            {
+                isTargetValid = false;
+            }
 
             // If you're not clicking to a valid location
-            else if (Input.GetKeyDown(KeyCode.Mouse0))
+            if (!isTargetValid && Input.GetKeyDown(KeyCode.Mouse0))
             {
                 Destroy(myTag);
             }
@@ -703,42 +708,48 @@ public class PlayerController : MonoBehaviour
 
     private void CameraRotation()
     {
-        // If there is an input and camera position is not fixed
-        if (currentLook.sqrMagnitude >= camRotateThreshold && !lockCameraPosition)
+        // Third person camera - follow
+        if (cameraMode == 0)
         {
-            cinemachineTargetYaw += currentLook.x * Time.deltaTime * RotationSpeed;
-            cinemachineTargetPitch += currentLook.y * Time.deltaTime * RotationSpeed;
-        }
-
-        // Clamp our rotations so our values are limited 360 degrees
-        cinemachineTargetYaw = ClampAngle(cinemachineTargetYaw, float.MinValue, float.MaxValue);
-
-        // Clamp pitch rotation
-        cinemachineTargetPitch = ClampAngle(cinemachineTargetPitch, -topClamp, bottomClamp);
-
-        // Cinemachine will follow this target
-        cinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + cameraAngleOverride, cinemachineTargetYaw, 0.0f);
-
-        // Body rotation on ground
-        if (!isFlying)
-        {
-            // First person constant rotation
-            if (cameraMode == 1)
+            // If there is an input and camera position is not fixed
+            if (currentLook.sqrMagnitude >= camRotateThreshold && !lockCameraPosition)
             {
-                // Get rotation velocity
-                rotationVelocity = currentLook.x * RotationSpeed * Time.deltaTime;
-
-                // Rotate the player with the camera
-                transform.Rotate(Vector3.up * rotationVelocity);
+                cinemachineTargetYaw += currentLook.x * Time.deltaTime * RotationSpeed;
+                cinemachineTargetPitch += currentLook.y * Time.deltaTime * RotationSpeed;
             }
 
-            // Third person delayed character rotation
-            if (cameraMode == 0)
+            // Clamp our rotations so our values are limited 360 degrees
+            cinemachineTargetYaw = ClampAngle(cinemachineTargetYaw, float.MinValue, float.MaxValue);
+
+            // Clamp pitch rotation
+            cinemachineTargetPitch = ClampAngle(cinemachineTargetPitch, -topClamp, bottomClamp);
+
+            // Cinemachine will follow this target
+            cinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + cameraAngleOverride, cinemachineTargetYaw, 0.0f);
+
+            // Body rotation on ground
+            if (!isFlying)
             {
+                // Delayed character rotation
                 if (lookTimeoutDelta < 0 && !inAnimation)
                 {
                     StartCoroutine(RotateToTarget(lookTarget));
                 }
+            }
+        }
+
+        // First person camera - rotate
+        if (cameraMode == 1)
+        {
+            if (currentLook.sqrMagnitude >= camRotateThreshold && !lockCameraPosition)
+            {
+                cinemachineTargetPitch += currentLook.y * Time.deltaTime * RotationSpeed;
+                rotationVelocity = currentLook.x * Time.deltaTime * RotationSpeed;
+
+                cinemachineTargetPitch = ClampAngle(cinemachineTargetPitch, -topClamp, bottomClamp);
+                cinemachineCameraTarget.transform.localRotation = Quaternion.Euler(cinemachineTargetPitch, 0f, 0f);
+
+                transform.Rotate(Vector3.up * rotationVelocity);
             }
         }
 
@@ -752,8 +763,10 @@ public class PlayerController : MonoBehaviour
         Vector3 targetDirection = new Vector3(dir.x, 0, dir.z);
         Quaternion targetRotation = Quaternion.LookRotation(targetDirection, Vector3.up);
 
+
         if (!isFlying)
         {
+            // Do left/right standing turning animation
             if (angleDir == 1)
             {
                 animator.SetBool(animIDturnLeft, true);
@@ -768,11 +781,12 @@ public class PlayerController : MonoBehaviour
             }
         }
 
+        // Rotate player body
         do
         {
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, Time.deltaTime * 180);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, Time.deltaTime * 270);
             yield return null;
-        } while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f);
+        } while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f || !movementPressed);
 
         lookTimeoutDelta = lookTimeout;
         MovementEnable();
