@@ -1,10 +1,10 @@
+using Cinemachine;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Animations.Rigging;
-using Cinemachine;
 using TMPro;
+using UnityEngine;
+using UnityEngine.Animations.Rigging;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
@@ -213,11 +213,12 @@ public class PlayerController : MonoBehaviour
 
     // Constant variables
     private const float camRotateThreshold = 0.01f;
-    private const float speedOffset = 0.1f;
+    private const float speedOffset = 0.01f;
 
     // States
     private bool grounded;
     private bool isFlying;
+    private bool inRotation;
     private bool inAnimation;
     private bool inStaticAnimation;
     private bool isTargetValid;
@@ -445,7 +446,14 @@ public class PlayerController : MonoBehaviour
         }
 
         // Animation blend
-        animationBlend = Mathf.Lerp(animationBlend, targetSpeed, Time.deltaTime * speedChangeRate);
+        if (animationBlend < targetSpeed - speedOffset || animationBlend > targetSpeed + speedOffset)
+        {
+            animationBlend = Mathf.Lerp(animationBlend, targetSpeed, Time.deltaTime * speedChangeRate);
+        }
+        else
+        {
+            animationBlend = targetSpeed;
+        }
 
         // Normalize input direction
         Vector3 inputDirection = new Vector3(currentMovement.x, 0.0f, currentMovement.y).normalized;
@@ -555,7 +563,7 @@ public class PlayerController : MonoBehaviour
         if (speed < targetSpeed - speedOffset || speed > targetSpeed + speedOffset)
         {
             // Lerp speed to target speed
-            speed = Mathf.Lerp(speed, targetSpeed * inputMagnitude, Time.deltaTime * speedChangeRate / 3);
+            speed = Mathf.Lerp(speed, targetSpeed * inputMagnitude, Time.deltaTime * speedChangeRate / 2);
 
             // Round speed to 3 decimal places
             speed = Mathf.Round(speed * 1000f) / 1000f;
@@ -583,13 +591,10 @@ public class PlayerController : MonoBehaviour
         // Move the player
         transform.position += speed * Time.deltaTime * targetDirection.normalized;
 
-        // Animation blend
-        animationBlend = Mathf.Lerp(animationBlend, targetSpeed, Time.deltaTime * speedChangeRate);
-
         // Update animator if using character
         if (hasAnimator)
         {
-            animator.SetFloat(animIDSpeed, animationBlend);
+            animator.SetFloat(animIDSpeed, speed);
         }
     }
 
@@ -846,6 +851,22 @@ public class PlayerController : MonoBehaviour
                     StartCoroutine(RotateToTarget(lookTarget));
                 }
             }
+
+            // Rotation interrupt
+            if (inRotation && Input.anyKeyDown)
+            {
+                StopCoroutine("RotateToTarget");
+
+                // Back to locomotion blend
+                animator.SetBool(animIDturnLeft, false);
+                animator.SetBool(animIDturnRight, false);
+
+                // Reset
+                lookTimeoutDelta = lookTimeout;
+                MovementEnable();
+                inRotation = false;
+                inAnimation = false;
+            }
         }
 
         // First person camera - rotate
@@ -867,39 +888,41 @@ public class PlayerController : MonoBehaviour
 
     private IEnumerator RotateToTarget(Transform target)
     {
+        inRotation = true;
         inAnimation = true;
         MovementDisable();
         Vector3 dir = (target.transform.position - transform.position).normalized;
         Vector3 targetDirection = new Vector3(dir.x, 0, dir.z);
         Quaternion targetRotation = Quaternion.LookRotation(targetDirection, Vector3.up);
 
-
         if (!isFlying)
         {
             // Do left/right standing turning animation
-            if (angleDir == 1)
+            if (angleDir == -1)
             {
                 animator.SetBool(animIDturnLeft, true);
-                yield return new WaitForSeconds(0.3f);
-                animator.SetBool(animIDturnLeft, false);
             }
-            else if (angleDir == -1)
+            else if (angleDir == 1)
             {
                 animator.SetBool(animIDturnRight, true);
-                yield return new WaitForSeconds(0.3f);
-                animator.SetBool(animIDturnRight, false);
             }
         }
 
         // Rotate player body
         do
         {
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, Time.deltaTime * 270);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, Time.deltaTime * 180);
             yield return null;
         } while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f);
 
+        // Back to locomotion blend
+        animator.SetBool(animIDturnLeft, false);
+        animator.SetBool(animIDturnRight, false);
+
+        // Reset
         lookTimeoutDelta = lookTimeout;
         MovementEnable();
+        inRotation = false;
         inAnimation = false;
     }
 
@@ -943,7 +966,8 @@ public class PlayerController : MonoBehaviour
         Vector3 flatTargetPos = new Vector3(lookTarget.position.x, transform.position.y, lookTarget.position.z);
         Vector3 heading = flatTargetPos - transform.position;
         float angle = Vector3.Angle(heading, transform.forward);
-        angleDir = AngleDir(transform.position, heading); // 1: left , -1: right
+
+        angleDir = AngleDir(transform.forward, heading); // 1: right, -1: left
 
         if (inStaticAnimation)
         {
@@ -1003,6 +1027,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // TODO: Fix deactivation - even the smallest weight in rig is causing head to twitch
     private void DeactivateRig(Rig rig, float rate)
     {
         if (rig.weight != 0)
