@@ -21,7 +21,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] // Sprint speed of the character in m/s
     private float sprintSpeed = 5.335f;
     [SerializeField] // Fly speed of the character in m/s
-    private float flySpeed = 8;
+    private float flySpeed = 4;
+    [SerializeField] // Fly speed of the character in m/s
+    private float fastFlySpeed = 8;
     [SerializeField] // Acceleration and deceleration
     private float speedChangeRate = 10.0f;
 
@@ -52,10 +54,14 @@ public class PlayerController : MonoBehaviour
     private GameObject FPPCamera;
     [SerializeField] // The follow target set in the Cinemachine Virtual Camera that the camera will follow
     private GameObject cinemachineCameraTarget;
-
     [SerializeField] // How fast the character turns to face movement direction
     [Range(0.0f, 0.3f)]
     private float rotationSmoothTime = 0.12f;
+    [SerializeField]
+    LayerMask walkingLayermask;
+    [SerializeField]
+    LayerMask flyingLayermask;
+
 
     [Space(10)]
     [SerializeField] // How far in degrees can you move the camera up
@@ -237,7 +243,11 @@ public class PlayerController : MonoBehaviour
             currentMovement = ctx.ReadValue<Vector2>();
             movementPressed = currentMovement.x != 0 || currentMovement.y != 0;
         };
-        input.Player.Move.canceled += ctx => currentMovement = Vector2.zero;
+        input.Player.Move.canceled += ctx =>
+        {
+            currentMovement = Vector2.zero;
+            movementPressed = false;
+        };
 
         // Running
         input.Player.Run.performed += ctx => runPressed = ctx.ReadValueAsButton();
@@ -262,6 +272,10 @@ public class PlayerController : MonoBehaviour
 
     private void Start()
     {
+        // Mouse lock
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+
         // Animation setup
         hasAnimator = TryGetComponent(out animator);
         AssignAnimationIDs();
@@ -300,11 +314,12 @@ public class PlayerController : MonoBehaviour
             JumpAndGravity();
             MovePlayer();
         }
-        if (isFlying)
+        else if (isFlying && !inAnimation)
         {
             FlyPlayer();
         }
 
+        ManageFlight();
         MoveLookTarget();
         CheckTargetingStatus();
         ManageHead();
@@ -362,12 +377,6 @@ public class PlayerController : MonoBehaviour
                 {
                     animator.SetBool(animIDJump, true);
                 }
-            }
-
-            // Initiate flight if ready to jump
-            if (Input.GetKeyDown(KeyCode.Tab) && jumpTimeoutDelta <= 0.0f && !inAnimation)
-            {
-                StartCoroutine(InitiateFlight());
             }
 
             // Decrease timeout if not ready to jump
@@ -464,26 +473,124 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private IEnumerator InitiateFlight()
+    private void ManageFlight()
     {
+        // Initiate flight if ready to jump
+        if (!isFlying && Input.GetKeyDown(KeyCode.Tab) && jumpTimeoutDelta <= 0.0f && !inAnimation)
+        {
+            StartCoroutine(StartFlight());
+        }
+
+        // Stop flight if flying
+        if (isFlying && Input.GetKeyDown(KeyCode.Tab) && !inAnimation)
+        {
+            StartCoroutine(EndFlight());
+        }
+    }
+
+    private IEnumerator StartFlight()
+    {
+        // Set states
         isFlying = true;
         inAnimation = true;
+        grounded = false;
+
+        // Change collision filter
+        camTPF.CameraCollisionFilter = flyingLayermask;
+
+        // Turn collider/controller off
+        controller.enabled = false;
+
+        // Zero ground speed
+        speed = 0;
+
+        // Stop ground animations
+        if (hasAnimator)
+        {
+            animator.SetFloat(animIDSpeed, 0);
+            animator.SetFloat(animIDMotionSpeed, 0);
+        }
+
+        // Flying state
         animator.SetBool(animIDisFlying, true);
 
-        float currentPos = transform.position.y;
+        // Get current pos and target pos
+        Vector3 targetPos = transform.position + new Vector3(0, flyJumpHeight, 0);
 
+        // Lerp to target pos
         do
         {
-            controller.Move(new Vector3(0, 3f, 0) * Time.deltaTime);
+            transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * 4);
             yield return null;
-        } while (transform.position.y < currentPos + flyJumpHeight);
+        } while (transform.position.y < targetPos.y - 0.01f && !movementPressed);
 
+        // Set state
         inAnimation = false;
+    }
+
+    private IEnumerator EndFlight()
+    {
+        isFlying = false;
+        camTPF.CameraCollisionFilter = walkingLayermask;
+        animator.SetBool(animIDisFlying, false);
+        controller.enabled = true;
+        yield return null;
     }
 
     private void FlyPlayer()
     {
-        targetSpeed = runPressed ? flySpeed : moveSpeed;
+        // Set target speed based on move speed, sprint speed and if sprint is pressed
+        targetSpeed = runPressed ? fastFlySpeed : flySpeed;
+
+        // If there is no input, set the target speed to 0
+        if (currentMovement == Vector2.zero) targetSpeed = 0.0f;
+
+        // Check if movement is analog (for controller input) - between 0 and 1
+        analogMovement = (currentMovement.x > 0f && currentMovement.x < 1.0f) || (currentMovement.y > 0f && currentMovement.y < 1.0f);
+
+        // If the movement isn't analog, then make the magnitude 1
+        float inputMagnitude = analogMovement ? currentMovement.magnitude : 1f;
+
+        // Accelerate or decelerate to target speed
+        if (speed < targetSpeed - speedOffset || speed > targetSpeed + speedOffset)
+        {
+            // Lerp speed to target speed
+            speed = Mathf.Lerp(speed, targetSpeed * inputMagnitude, Time.deltaTime * speedChangeRate / 3);
+
+            // Round speed to 3 decimal places
+            speed = Mathf.Round(speed * 1000f) / 1000f;
+        }
+        else
+        {
+            speed = targetSpeed;
+        }
+
+        // Normalize input direction
+        Vector3 inputDirection = new Vector3(currentMovement.x, 0.0f, currentMovement.y).normalized;
+
+        // If there is a move input rotate player when the player is moving
+        if (currentMovement != Vector2.zero)
+        {
+            targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg + mainCamera.eulerAngles.y;
+            float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref rotationVelocity, rotationSmoothTime);
+
+            // Rotate to face input direction relative to camera position
+            transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+        }
+
+        Vector3 targetDirection = Quaternion.Euler(mainCamera.eulerAngles.x, targetRotation, 0.0f) * Vector3.forward;
+
+        // Move the player
+        transform.position += speed * Time.deltaTime * targetDirection.normalized;
+
+        // Animation blend
+        animationBlend = Mathf.Lerp(animationBlend, targetSpeed, Time.deltaTime * speedChangeRate);
+
+        // Update animator if using character
+        if (hasAnimator)
+        {
+            animator.SetFloat(animIDSpeed, animationBlend);
+        }
     }
 
     private void MoveLookTarget()
@@ -603,7 +710,7 @@ public class PlayerController : MonoBehaviour
                         }
                         else
                         {
-                            // There isn't any, spawn first object, happens only once in play
+                            // If there isn't any, spawn first object
                             myDistTag = Instantiate(distObject);
                             myDistTag.transform.position = hit.point;
                         }
@@ -639,21 +746,24 @@ public class PlayerController : MonoBehaviour
                 // Decrease timer while held
                 if (holdTimeoutDelta >= 0.0f)
                 {
-                    holdTimeoutDelta -= Time.deltaTime;
+                    holdTimeoutDelta -= 2 * Time.deltaTime;
                 }
 
                 // Destroy distance tags, texts and lines
                 else
                 {
                     GameObject[] distPermObjects = GameObject.FindGameObjectsWithTag("DistPermObject");
-                    GameObject[] distObjects = GameObject.FindGameObjectsWithTag("DistObject");
-                    var objList = new List<GameObject>();
-                    objList.AddRange(distPermObjects);
-                    objList.AddRange(distObjects);
-
-                    foreach (GameObject obj in objList)
+                    if (distPermObjects.Length > 0)
                     {
-                        Destroy(obj);
+                        GameObject[] distObjects = GameObject.FindGameObjectsWithTag("DistObject");
+                        var objList = new List<GameObject>();
+                        objList.AddRange(distPermObjects);
+                        objList.AddRange(distObjects);
+
+                        foreach (GameObject obj in objList)
+                        {
+                            Destroy(obj);
+                        }
                     }
                 }
             }
@@ -786,7 +896,7 @@ public class PlayerController : MonoBehaviour
         {
             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, Time.deltaTime * 270);
             yield return null;
-        } while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f || !movementPressed);
+        } while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f);
 
         lookTimeoutDelta = lookTimeout;
         MovementEnable();
@@ -838,6 +948,11 @@ public class PlayerController : MonoBehaviour
         if (inStaticAnimation)
         {
             // If in static animation, don't look
+            notLooking = true;
+        }
+        else if (isFlying && speed > 1)
+        {
+            // If flying in high speed, don't try to look
             notLooking = true;
         }
         else
@@ -1075,7 +1190,6 @@ public class PlayerController : MonoBehaviour
         }
 
         // Stop loop animations
-
         // Dance animation loop stop
         if (Input.GetKeyUp(KeyCode.J))
         {
