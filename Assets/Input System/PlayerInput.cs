@@ -57,6 +57,14 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": ""Press""
+                },
+                {
+                    ""name"": ""Ascend"",
+                    ""type"": ""Value"",
+                    ""id"": ""c0c9c13a-42c4-47bf-a615-b5d20939cefd"",
+                    ""expectedControlType"": ""Axis"",
+                    ""processors"": """",
+                    ""interactions"": ""Press""
                 }
             ],
             ""bindings"": [
@@ -158,6 +166,39 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                     ""action"": ""Toggle Camera"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""1D Axis"",
+                    ""id"": ""d719b6cb-105c-446b-8031-d7a165cd83ed"",
+                    ""path"": ""1DAxis"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Ascend"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""negative"",
+                    ""id"": ""eee4e443-0459-4708-835a-565cc1db00a1"",
+                    ""path"": ""<Keyboard>/q"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard + Mouse"",
+                    ""action"": ""Ascend"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""positive"",
+                    ""id"": ""43717469-9665-4e7d-87b8-b051f9bfa87e"",
+                    ""path"": ""<Keyboard>/e"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard + Mouse"",
+                    ""action"": ""Ascend"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
                 }
             ]
         }
@@ -188,6 +229,7 @@ public class @PlayerInput : IInputActionCollection, IDisposable
         m_Player_Jump = m_Player.FindAction("Jump", throwIfNotFound: true);
         m_Player_Run = m_Player.FindAction("Run", throwIfNotFound: true);
         m_Player_ToggleCamera = m_Player.FindAction("Toggle Camera", throwIfNotFound: true);
+        m_Player_Ascend = m_Player.FindAction("Ascend", throwIfNotFound: true);
     }
 
     public void Dispose()
@@ -242,6 +284,7 @@ public class @PlayerInput : IInputActionCollection, IDisposable
     private readonly InputAction m_Player_Jump;
     private readonly InputAction m_Player_Run;
     private readonly InputAction m_Player_ToggleCamera;
+    private readonly InputAction m_Player_Ascend;
     public struct PlayerActions
     {
         private @PlayerInput m_Wrapper;
@@ -251,6 +294,7 @@ public class @PlayerInput : IInputActionCollection, IDisposable
         public InputAction @Jump => m_Wrapper.m_Player_Jump;
         public InputAction @Run => m_Wrapper.m_Player_Run;
         public InputAction @ToggleCamera => m_Wrapper.m_Player_ToggleCamera;
+        public InputAction @Ascend => m_Wrapper.m_Player_Ascend;
         public InputActionMap Get() { return m_Wrapper.m_Player; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -275,6 +319,9 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                 @ToggleCamera.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleCamera;
                 @ToggleCamera.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleCamera;
                 @ToggleCamera.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleCamera;
+                @Ascend.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAscend;
+                @Ascend.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAscend;
+                @Ascend.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAscend;
             }
             m_Wrapper.m_PlayerActionsCallbackInterface = instance;
             if (instance != null)
@@ -294,6 +341,9 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                 @ToggleCamera.started += instance.OnToggleCamera;
                 @ToggleCamera.performed += instance.OnToggleCamera;
                 @ToggleCamera.canceled += instance.OnToggleCamera;
+                @Ascend.started += instance.OnAscend;
+                @Ascend.performed += instance.OnAscend;
+                @Ascend.canceled += instance.OnAscend;
             }
         }
     }
@@ -314,5 +364,6 @@ public class @PlayerInput : IInputActionCollection, IDisposable
         void OnJump(InputAction.CallbackContext context);
         void OnRun(InputAction.CallbackContext context);
         void OnToggleCamera(InputAction.CallbackContext context);
+        void OnAscend(InputAction.CallbackContext context);
     }
 }

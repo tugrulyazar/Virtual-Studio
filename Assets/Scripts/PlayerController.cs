@@ -22,12 +22,14 @@ namespace UserBehaviour
         private float moveSpeed = 2.0f;
         [SerializeField] // Sprint speed of the character in m/s
         private float sprintSpeed = 5.335f;
-        [SerializeField] // Fly speed of the character in m/s
+        [SerializeField] // Flying speed of the character in m/s
         private float flySpeed = 4;
-        [SerializeField] // Fly speed of the character in m/s
+        [SerializeField] // Fast flying speed of the character in m/s
         private float fastFlySpeed = 8;
         [SerializeField] // Acceleration and deceleration
-        private float speedChangeRate = 10.0f;
+        private float groundAcceleration = 10.0f;
+        [SerializeField]
+        private float flyAcceleration = 3.0f;
 
         [Header("Jump")]
         [SerializeField] // The height the player can jump
@@ -134,9 +136,11 @@ namespace UserBehaviour
 
         private Vector2 currentMovement;
         private Vector2 currentLook;
+        private float currentAscension;
 
         private bool movementPressed;
         private bool lookPressed;
+        private bool ascendPressed;
         private bool runPressed;
         private bool jumpPressed;
         private bool camTogglePressed;
@@ -144,9 +148,12 @@ namespace UserBehaviour
 
         // Player
         private float speed;
-        private float animationBlend;
+        private float horizontalSpeed;
+        private float verticalSpeed;
         private float targetRotation = 0.0f;
         private float targetSpeed;
+        private float targetHorizontalSpeed;
+        private float targetVerticalSpeed;
         private float rotationVelocity;
         private float verticalVelocity;
         private float terminalVelocity = 53.0f;
@@ -216,7 +223,7 @@ namespace UserBehaviour
 
         // Constant variables
         private const float camRotateThreshold = 0.01f;
-        private const float speedOffset = 0.01f;
+        private const float speedOffset = 0.1f;
 
         // States
         public bool grounded;
@@ -260,6 +267,18 @@ namespace UserBehaviour
             {
                 currentLook = Vector2.zero;
                 lookPressed = false;
+            };
+
+            // Ascension
+            input.Player.Ascend.performed += ctx =>
+            {
+                currentAscension = ctx.ReadValue<float>();
+                ascendPressed = currentAscension != 0;
+            };
+            input.Player.Ascend.canceled += ctx =>
+            {
+                currentAscension = 0f;
+                ascendPressed = false;
             };
 
             // Running
@@ -330,6 +349,9 @@ namespace UserBehaviour
             ManageHead();
             ManagePointAndZoom();
             ControlAnimations();
+
+            // Debug
+            // Debug.Log();
         }
 
         private void LateUpdate()
@@ -439,7 +461,7 @@ namespace UserBehaviour
             {
                 // Creates curved result rather than a linear one giving a more organic speed change
                 // Note T in Lerp is clamped, so we don't need to clamp our speed
-                speed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed * inputMagnitude, Time.deltaTime * speedChangeRate);
+                speed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed * inputMagnitude, Time.deltaTime * groundAcceleration);
 
                 // Round speed to 3 decimal places
                 speed = Mathf.Round(speed * 1000f) / 1000f;
@@ -447,16 +469,6 @@ namespace UserBehaviour
             else
             {
                 speed = targetSpeed;
-            }
-
-            // Animation blend
-            if (animationBlend < targetSpeed - speedOffset || animationBlend > targetSpeed + speedOffset)
-            {
-                animationBlend = Mathf.Lerp(animationBlend, targetSpeed, Time.deltaTime * speedChangeRate);
-            }
-            else
-            {
-                animationBlend = targetSpeed;
             }
 
             // Normalize input direction
@@ -495,7 +507,7 @@ namespace UserBehaviour
             // Update animator if using character
             if (hasAnimator)
             {
-                animator.SetFloat(animIDSpeed, animationBlend);
+                animator.SetFloat(animIDSpeed, speed);
                 animator.SetFloat(animIDMotionSpeed, inputMagnitude);
             }
         }
@@ -530,6 +542,10 @@ namespace UserBehaviour
 
             // Zero ground speed
             speed = 0;
+
+            // Zero flying speed
+            horizontalSpeed = 0f;
+            verticalSpeed = 0f;
 
             // Stop ground animations
             if (hasAnimator)
@@ -568,9 +584,13 @@ namespace UserBehaviour
         {
             // Set target speed based on move speed, sprint speed and if sprint is pressed
             targetSpeed = runPressed ? fastFlySpeed : flySpeed;
+            targetHorizontalSpeed = targetSpeed;
 
-            // If there is no input, set the target speed to 0
-            if (currentMovement == Vector2.zero) targetSpeed = 0.0f;
+            // Get target vertical speed through input
+            targetVerticalSpeed = targetSpeed * currentAscension;
+
+            // If there is no input, set the target speeds to 0
+            if (currentMovement == Vector2.zero) targetHorizontalSpeed = 0.0f;
 
             // Check if movement is analog (for controller input) - between 0 and 1
             analogMovement = (currentMovement.x > 0f && currentMovement.x < 1.0f) || (currentMovement.y > 0f && currentMovement.y < 1.0f);
@@ -578,60 +598,63 @@ namespace UserBehaviour
             // If the movement isn't analog, then make the magnitude 1
             float inputMagnitude = analogMovement ? currentMovement.magnitude : 1f;
 
-            // Accelerate or decelerate to target speed
-            if (speed < targetSpeed - speedOffset || speed > targetSpeed + speedOffset)
+            // Accelerate or decelerate to target horizontal speed
+            if (horizontalSpeed < targetHorizontalSpeed - speedOffset || horizontalSpeed > targetHorizontalSpeed + speedOffset)
             {
                 // Lerp speed to target speed
-                speed = Mathf.Lerp(speed, targetSpeed * inputMagnitude, Time.deltaTime * speedChangeRate / 2);
+                horizontalSpeed = Mathf.Lerp(horizontalSpeed, targetHorizontalSpeed * inputMagnitude, Time.deltaTime * flyAcceleration);
 
                 // Round speed to 3 decimal places
-                speed = Mathf.Round(speed * 1000f) / 1000f;
+                horizontalSpeed = Mathf.Round(horizontalSpeed * 1000f) / 1000f;
             }
             else
             {
-                speed = targetSpeed;
+                horizontalSpeed = targetHorizontalSpeed;
             }
 
-            // Normalize input direction
+            // Accelerate or decelerate to target vertical speed
+            if (verticalSpeed < targetVerticalSpeed - speedOffset || verticalSpeed > targetVerticalSpeed + speedOffset)
+            {
+                // Lerp speed to target speed
+                verticalSpeed = Mathf.Lerp(verticalSpeed, targetVerticalSpeed * inputMagnitude, Time.deltaTime * flyAcceleration);
+
+                // Round speed to 3 decimal places
+                verticalSpeed = Mathf.Round(verticalSpeed * 1000f) / 1000f;
+            }
+            else
+            {
+                verticalSpeed = targetVerticalSpeed;
+            }
+
+            // Normalize input horizontal direction
             Vector3 inputDirection = new Vector3(currentMovement.x, 0.0f, currentMovement.y).normalized;
 
-            // Third person fly
-            if (cameraMode == 0)
+            // If there is a move input rotate player when the player is moving
+            if (currentMovement != Vector2.zero || currentAscension != 0.0f)
             {
-                // If there is a move input rotate player when the player is moving
-                if (currentMovement != Vector2.zero)
-                {
-                    targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg + mainCamera.eulerAngles.y;
-                    float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref rotationVelocity, rotationSmoothTime);
+                targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg + mainCamera.eulerAngles.y;
+                float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref rotationVelocity, rotationSmoothTime);
 
+                // Third person character rotation
+                if (cameraMode == 0)
+                {
                     // Rotate to face input direction relative to camera position
                     transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
                 }
 
-                Vector3 targetDirection = Quaternion.Euler(mainCamera.eulerAngles.x, targetRotation, 0.0f) * Vector3.forward;
-
-                // Move the player
-                transform.position += speed * Time.deltaTime * targetDirection.normalized;
             }
 
-            // First person fly
-            else if (cameraMode == 1)
-            {
-                if (currentMovement != Vector2.zero)
-                {
-                    targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg + mainCamera.eulerAngles.y;
-                    float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref rotationVelocity, rotationSmoothTime);
-                }
+            // Get look direction
+            Vector3 lookDirection = Quaternion.Euler(mainCamera.eulerAngles.x, targetRotation, 0.0f) * Vector3.forward;
 
-                Vector3 targetDirection = Quaternion.Euler(mainCamera.eulerAngles.x, targetRotation, 0.0f) * Vector3.forward;
-
-                transform.position += speed * Time.deltaTime * targetDirection.normalized;
-            }
+            // Move the player
+            transform.position += (horizontalSpeed * lookDirection.normalized + verticalSpeed * Vector3.up) * Time.deltaTime;
 
             // Update animator if using character
             if (hasAnimator)
             {
-                animator.SetFloat(animIDSpeed, speed);
+                // Use animation blend only with horizontal movement
+                animator.SetFloat(animIDSpeed, horizontalSpeed);
             }
         }
 
@@ -1108,9 +1131,9 @@ namespace UserBehaviour
                 // If in static animation, don't look
                 notLooking = true;
             }
-            else if (isFlying && speed > 1)
+            else if (isFlying && horizontalSpeed > 1)
             {
-                // If flying in high speed, don't try to look
+                // If flying horizontally in high speed, don't try to look
                 notLooking = true;
             }
             else
@@ -1121,7 +1144,7 @@ namespace UserBehaviour
                     notLooking = true;
 
                     // And player isn't moving or looking around, decrease timer
-                    if (!movementPressed && !lookPressed)
+                    if (!movementPressed && !lookPressed && !ascendPressed)
                     {
                         if (lookTimeoutDelta >= 0)
                         {
@@ -1163,13 +1186,12 @@ namespace UserBehaviour
             }
         }
 
-        // TODO: Fix deactivation - even the smallest weight in rig is causing head to twitch
         private void DeactivateRig(Rig rig, float rate)
         {
             if (rig.weight != 0)
             {
                 // Lerp rig constraint weights
-                rig.weight = (rig.weight < 0.01) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * rate);
+                rig.weight = (rig.weight < 0.01) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * rate); // TODO: Fix deactivation - even the smallest weight in rig is causing head to twitch
             }
         }
 
@@ -1298,7 +1320,7 @@ namespace UserBehaviour
         private IEnumerator EndLoopAnimation(int animID)
         {
             animator.SetBool(animID, false);
-            yield return new WaitForSeconds(3);
+            yield return new WaitForSeconds(3); // TODO: need to get animation clip length
             MovementEnable();
             inAnimation = false;
             inStaticAnimation = false;

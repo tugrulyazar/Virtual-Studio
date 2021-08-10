@@ -1933,7 +1933,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1046059851}
   m_LocalRotation: {x: 0.70710576, y: -0, z: -0, w: 0.70710784}
-  m_LocalPosition: {x: 0.32, y: 5.16, z: 5.57}
+  m_LocalPosition: {x: 0.32, y: 44.2, z: 5.57}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 159463464}
@@ -2340,7 +2340,7 @@ Camera:
   far clip plane: 500
   field of view: 40
   orthographic: 0
-  orthographic size: 10
+  orthographic size: 5
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -4866,7 +4866,7 @@ CharacterController:
   m_StepOffset: 0.25
   m_SkinWidth: 0.02
   m_MinMoveDistance: 0
-  m_Center: {x: 0, y: 0.93, z: 0}
+  m_Center: {x: 0, y: 0.9, z: 0}
 --- !u!114 &5166924442857309512
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4916,10 +4916,10 @@ MonoBehaviour:
   lookTarget: {fileID: 1451973752}
   targetDistance: 4
   frontAngle: 100
-  raycastDistance: 10
+  raycastDistance: 30
   raycastLayerMask:
     serializedVersion: 2
-    m_Bits: 65
+    m_Bits: 193
   tagObject: {fileID: 2134720236750715303, guid: 6ce6a0c7a8c116f40ba25abadc867ed0, type: 3}
   permObject: {fileID: 2134720236750715303, guid: 022cd9d483ee24844a75d1f88dde69ca, type: 3}
   distObject: {fileID: 2134720236750715303, guid: cd9409e8acd95584bb5d6954e42f4ba7, type: 3}
