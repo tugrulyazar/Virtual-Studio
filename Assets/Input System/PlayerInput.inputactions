@@ -168,7 +168,7 @@
                 {
                     "name": "negative",
                     "id": "eee4e443-0459-4708-835a-565cc1db00a1",
-                    "path": "<Keyboard>/q",
+                    "path": "<Keyboard>/ctrl",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard + Mouse",
@@ -179,7 +179,7 @@
                 {
                     "name": "positive",
                     "id": "43717469-9665-4e7d-87b8-b051f9bfa87e",
-                    "path": "<Keyboard>/e",
+                    "path": "<Keyboard>/space",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard + Mouse",

@@ -650,6 +650,8 @@ namespace UserBehaviour
             // Move the player
             transform.position += (horizontalSpeed * lookDirection.normalized + verticalSpeed * Vector3.up) * Time.deltaTime;
 
+            Debug.Log($"Look Direction: {lookDirection}");
+
             // Update animator if using character
             if (hasAnimator)
             {
