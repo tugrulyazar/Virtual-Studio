@@ -338,7 +338,7 @@ namespace UserBehaviour
                 JumpAndGravity();
                 MovePlayer();
             }
-            else if (isFlying && !inAnimation)
+            else
             {
                 FlyPlayer();
             }
@@ -649,8 +649,6 @@ namespace UserBehaviour
 
             // Move the player
             transform.position += (horizontalSpeed * lookDirection.normalized + verticalSpeed * Vector3.up) * Time.deltaTime;
-
-            Debug.Log($"Look Direction: {lookDirection}");
 
             // Update animator if using character
             if (hasAnimator)
@@ -1268,16 +1266,16 @@ namespace UserBehaviour
         private void ControlAnimations()
         {
             // Play animations, only if grounded and not already in animation
-            if (grounded && !inAnimation)
+            if (!inAnimation)
             {
                 // Wave animation one shot
                 if (Input.GetKeyDown(KeyCode.H))
                 {
-                    StartCoroutine(OneShotAnimation(animIDisWaving));
+                    StartCoroutine(WaveAnimation());
                 }
 
                 // Dance animation loop start
-                if (Input.GetKeyDown(KeyCode.J))
+                if (grounded && Input.GetKeyDown(KeyCode.J))
                 {
                     StartLoopAnimation(animIDisDancing);
                 }
@@ -1291,23 +1289,23 @@ namespace UserBehaviour
             }
         }
 
-        private IEnumerator OneShotAnimation(int animID)
+        private IEnumerator WaveAnimation()
         {
             inAnimation = true;
 
-            // Disable movement while in animation
-            MovementDisable();
+            // Disable jump while in animation
+            input.Player.Jump.Disable();
 
             // To register animation only once
-            animator.SetBool(animID, true);
+            animator.SetBool(animIDisWaving, true);
             yield return new WaitForEndOfFrame();
-            animator.SetBool(animID, false);
+            animator.SetBool(animIDisWaving, false);
 
             // Wait for the animation duration
             yield return new WaitForSeconds(4); // TODO: need to get animation clip length
 
-            // Enable movement after animation
-            MovementEnable();
+            // Enable jump after animation
+            input.Player.Jump.Enable();
             inAnimation = false;
         }
 
