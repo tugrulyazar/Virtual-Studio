@@ -47,7 +47,7 @@ namespace UserBehaviour
         [SerializeField] // Useful for rough ground
         public float groundedOffset = -0.14f;
         [SerializeField] // The radius of the grounded check. Should match the radius of the CharacterController
-        public float groundedRadius = 0.28f;
+        public float groundedRadius = 0.15f;
         [SerializeField] // What layers the character uses as ground
         private LayerMask groundLayers;
 
@@ -232,6 +232,7 @@ namespace UserBehaviour
         private bool inRotation;
         private bool inAnimation;
         private bool inStaticAnimation;
+        private bool inLoopAnimation;
         private bool isTargetValid;
         private bool notLooking;
         private bool zoomedIn;
@@ -316,6 +317,7 @@ namespace UserBehaviour
             isFlying = false;
             inAnimation = false;
             inStaticAnimation = false;
+            inLoopAnimation = false;
             isTargetValid = false;
             notLooking = false;
             zoomedIn = false;
@@ -1283,7 +1285,7 @@ namespace UserBehaviour
 
             // Stop loop animations
             // Dance animation loop stop
-            if (Input.GetKeyUp(KeyCode.J))
+            if (inLoopAnimation && Input.GetKeyUp(KeyCode.J))
             {
                 StartCoroutine(EndLoopAnimation(animIDisDancing));
             }
@@ -1313,6 +1315,7 @@ namespace UserBehaviour
         {
             inAnimation = true;
             inStaticAnimation = true;
+            inLoopAnimation = true;
             MovementDisable();
             animator.SetBool(animID, true);
         }
@@ -1324,6 +1327,7 @@ namespace UserBehaviour
             MovementEnable();
             inAnimation = false;
             inStaticAnimation = false;
+            inLoopAnimation = false;
         }
 
         private void MovementDisable()
