@@ -261,82 +261,8 @@ namespace UserBehaviour
             // Initialize input system
             input = new PlayerInput();
 
-            // Subscribe to input
-            // Movement
-            input.Player.Move.performed += ctx =>
-            {
-                currentMovement = ctx.ReadValue<Vector2>();
-                movementPressed = currentMovement.x != 0 || currentMovement.y != 0;
-            };
-            input.Player.Move.canceled += ctx =>
-            {
-                currentMovement = Vector2.zero;
-                movementPressed = false;
-            };
-
-            // Looking
-            input.Player.Look.performed += ctx =>
-            {
-                currentLook = ctx.ReadValue<Vector2>();
-                lookPressed = currentLook.x != 0 || currentLook.y != 0;
-            };
-            input.Player.Look.canceled += ctx =>
-            {
-                currentLook = Vector2.zero;
-                lookPressed = false;
-            };
-
-            // Flight toggle
-            input.Player.ToggleFlight.performed += ctx => flightTogglePressed = ctx.ReadValueAsButton();
-            input.Player.ToggleFlight.canceled += ctx => flightTogglePressed = false;
-
-            // Ascension
-            input.Player.Ascend.performed += ctx =>
-            {
-                currentAscension = ctx.ReadValue<float>();
-                ascendPressed = currentAscension != 0;
-            };
-            input.Player.Ascend.canceled += ctx =>
-            {
-                currentAscension = 0f;
-                ascendPressed = false;
-            };
-
-            // Running
-            input.Player.Run.performed += ctx => runPressed = ctx.ReadValueAsButton();
-            input.Player.Run.canceled += ctx => runPressed = false;
-
-            // Jumping
-            input.Player.Jump.performed += ctx => jumpPressed = ctx.ReadValueAsButton();
-            input.Player.Jump.canceled += ctx => jumpPressed = false;
-
-            // Sitting
-            input.Player.Sit.performed += ctx => sitPressed = ctx.ReadValueAsButton();
-            input.Player.Sit.canceled += ctx => sitPressed = false;
-
-            // Camera toggle
-            input.Player.ToggleCamera.performed += ctx => camTogglePressed = ctx.ReadValueAsButton();
-            input.Player.ToggleCamera.canceled += ctx => camTogglePressed = false;
-
-            // Camera toggle
-            input.Player.ToggleShoulder.performed += ctx => shoulderTogglePressed = ctx.ReadValueAsButton();
-            input.Player.ToggleShoulder.canceled += ctx => shoulderTogglePressed = false;
-
-            // Waving
-            input.Player.Wave.performed += ctx => wavePressed = ctx.ReadValueAsButton();
-            input.Player.Wave.canceled += ctx => wavePressed = false;
-
-            // Dancing
-            input.Player.Dance.performed += ctx =>
-            {
-                dancePressed = true;
-                danceReleased = false;
-            };
-            input.Player.Dance.canceled += ctx =>
-            {
-                dancePressed = false;
-                danceReleased = true;
-            };
+            // Input System
+            SubscribeToInput();
         }
 
         private void Start()
@@ -1485,6 +1411,85 @@ namespace UserBehaviour
             {
                 return 0f;
             }
+        }
+
+        private void SubscribeToInput()
+        {
+            // Movement
+            input.Player.Move.performed += ctx =>
+            {
+                currentMovement = ctx.ReadValue<Vector2>();
+                movementPressed = currentMovement.x != 0 || currentMovement.y != 0;
+            };
+            input.Player.Move.canceled += ctx =>
+            {
+                currentMovement = Vector2.zero;
+                movementPressed = false;
+            };
+
+            // Looking
+            input.Player.Look.performed += ctx =>
+            {
+                currentLook = ctx.ReadValue<Vector2>();
+                lookPressed = currentLook.x != 0 || currentLook.y != 0;
+            };
+            input.Player.Look.canceled += ctx =>
+            {
+                currentLook = Vector2.zero;
+                lookPressed = false;
+            };
+
+            // Flight toggle
+            input.Player.ToggleFlight.performed += ctx => flightTogglePressed = ctx.ReadValueAsButton();
+            input.Player.ToggleFlight.canceled += ctx => flightTogglePressed = false;
+
+            // Ascension
+            input.Player.Ascend.performed += ctx =>
+            {
+                currentAscension = ctx.ReadValue<float>();
+                ascendPressed = currentAscension != 0;
+            };
+            input.Player.Ascend.canceled += ctx =>
+            {
+                currentAscension = 0f;
+                ascendPressed = false;
+            };
+
+            // Running
+            input.Player.Run.performed += ctx => runPressed = ctx.ReadValueAsButton();
+            input.Player.Run.canceled += ctx => runPressed = false;
+
+            // Jumping
+            input.Player.Jump.performed += ctx => jumpPressed = ctx.ReadValueAsButton();
+            input.Player.Jump.canceled += ctx => jumpPressed = false;
+
+            // Sitting
+            input.Player.Sit.performed += ctx => sitPressed = ctx.ReadValueAsButton();
+            input.Player.Sit.canceled += ctx => sitPressed = false;
+
+            // Camera toggle
+            input.Player.ToggleCamera.performed += ctx => camTogglePressed = ctx.ReadValueAsButton();
+            input.Player.ToggleCamera.canceled += ctx => camTogglePressed = false;
+
+            // Camera toggle
+            input.Player.ToggleShoulder.performed += ctx => shoulderTogglePressed = ctx.ReadValueAsButton();
+            input.Player.ToggleShoulder.canceled += ctx => shoulderTogglePressed = false;
+
+            // Waving
+            input.Player.Wave.performed += ctx => wavePressed = ctx.ReadValueAsButton();
+            input.Player.Wave.canceled += ctx => wavePressed = false;
+
+            // Dancing
+            input.Player.Dance.performed += ctx =>
+            {
+                dancePressed = true;
+                danceReleased = false;
+            };
+            input.Player.Dance.canceled += ctx =>
+            {
+                dancePressed = false;
+                danceReleased = true;
+            };
         }
 
         private void AssignAnimationIDs()
