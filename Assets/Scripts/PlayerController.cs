@@ -108,8 +108,10 @@ namespace UserBehaviour
         private GameObject distObject;
         [SerializeField] // Distance measuring line object
         private GameObject distLine;
-        [SerializeField] // Distance text object
+        [SerializeField] // Text object
         private GameObject textObject;
+        [SerializeField] // Distance measuring tag object
+        private GameObject elevationObject;
         [SerializeField] // Pointing mode crosshair
         private GameObject crosshair;
         [SerializeField] // Permanent tag object context menu
@@ -726,7 +728,8 @@ namespace UserBehaviour
                 {
                     isTargetValid = true;
                     lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * lookTarget_TRate);
-                    // Place tag at pointed location
+                    
+                    // Place temp tag
                     if (Input.GetKeyDown(KeyCode.Mouse0))
                     {
                         if (!myTag)
@@ -746,7 +749,7 @@ namespace UserBehaviour
                         //}
                     }
 
-                    // Place perm tag at pointed location
+                    // Spawn perm tag
                     if (Input.GetKeyDown(KeyCode.E))
                     {
                         if (!hit.transform.CompareTag("PermObject"))
@@ -759,7 +762,7 @@ namespace UserBehaviour
                         }
                     }
 
-                    // Create distance measuring objects
+                    // Spawn distance measuring objects
                     if (Input.GetKeyUp(KeyCode.C))
                     {
                         // Check if key up didn't come after holding down to delete
@@ -813,6 +816,19 @@ namespace UserBehaviour
                         }
                         // Reset timer
                         holdTimeoutDelta = deleteHoldTimeout;
+                    }
+
+                    // Spawn elevation tag
+                    if (Input.GetKeyDown(KeyCode.T))
+                    {
+                        if (!hit.transform.CompareTag("ElevationObject"))
+                        {
+                            Instantiate(elevationObject, hit.point, Quaternion.identity);
+                        }
+                        else
+                        {
+                            Destroy(hit.transform.gameObject);
+                        }
                     }
                 }
                 else

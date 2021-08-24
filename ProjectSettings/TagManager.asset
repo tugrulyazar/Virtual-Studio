@@ -8,6 +8,7 @@ TagManager:
   - PermObject
   - DistObject
   - DistPermObject
+  - ElevationObject
   layers:
   - Default
   - TransparentFX
