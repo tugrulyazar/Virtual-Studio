@@ -1344,6 +1344,7 @@ namespace UserBehaviour
             inAnimation = false;
             isSitting = false;
             animator.SetBool(animIDisSitting, false);
+            MovementEnable();
 
             for (int i = 0; i < smoothCount; i++)
             {
@@ -1352,7 +1353,6 @@ namespace UserBehaviour
             }
 
             sitDelayed = false;
-            MovementEnable();
         }
 
         private void StartLoopAnimation(int animID)
