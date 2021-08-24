@@ -1023,8 +1023,8 @@ namespace UserBehaviour
             if (cameraMode == 0)
             {
                 // Third-person perspective
-                FPPCamera.SetActive(false);
                 TPPCamera.SetActive(true);
+                FPPCamera.SetActive(false);
                 yield return null;
                 StartCoroutine(GetActiveCamera());
                 yield return new WaitForSeconds(0.2f);
