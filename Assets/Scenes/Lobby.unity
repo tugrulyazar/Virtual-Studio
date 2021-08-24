@@ -4235,7 +4235,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &2006639177
 Transform:
   m_ObjectHideFlags: 0
@@ -6000,6 +6000,7 @@ MonoBehaviour:
   cameraAngleOverride: 0
   lockCameraPosition: 0
   headRig: {fileID: 1709443312}
+  lookRig: {fileID: 2006639178}
   rightHandRig: {fileID: 1407519215}
   leftHandRig: {fileID: 132754170}
   lookTarget: {fileID: 1451973752}

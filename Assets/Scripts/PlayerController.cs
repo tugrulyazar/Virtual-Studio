@@ -79,6 +79,8 @@ namespace UserBehaviour
         [Header("Pointing")]
         [SerializeField] // Head rig for looking at
         private Rig headRig;
+        [SerializeField] // Head rig for looking at
+        private Rig lookRig;
         [SerializeField] // Right hand rig for pointing
         private Rig rightHandRig;
         [SerializeField] // Left hand rig for pointing
@@ -233,6 +235,9 @@ namespace UserBehaviour
         // Constant variables
         private const float camRotateThreshold = 0.01f;
         private const float speedOffset = 0.1f;
+        private const float smoothTime = 2f;
+        private const float smoothCount = smoothTime * 60;
+
 
         // States
         public bool grounded;
@@ -246,6 +251,7 @@ namespace UserBehaviour
         private bool isTargetValid;
         private bool notLooking;
         private bool zoomedIn;
+        private bool sitDelayed;
 
         private void Awake()
         {
@@ -360,6 +366,7 @@ namespace UserBehaviour
             isTargetValid = false;
             notLooking = false;
             zoomedIn = false;
+            sitDelayed = false;
 
             // Set active hand
             handRig = rightHandRig;
@@ -390,9 +397,6 @@ namespace UserBehaviour
             ManageHead();
             ManagePointAndZoom();
             ControlAnimations();
-
-            // Debug
-            // Debug.Log();
         }
 
         private void LateUpdate()
@@ -957,7 +961,7 @@ namespace UserBehaviour
                 // Cinemachine will follow this target
                 cinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + cameraAngleOverride, cinemachineTargetYaw, 0.0f);
 
-                // Delayed character rotation
+                // Delayed character rotation if not in animation
                 if (lookTimeoutDelta < 0 && !inAnimation)
                 {
                     StartCoroutine(RotateToTarget(lookTarget));
@@ -1198,8 +1202,8 @@ namespace UserBehaviour
                 {
                     notLooking = true;
 
-                    // And player isn't moving or looking around, decrease timer
-                    if (!movementPressed && !ascendPressed && !lookPressed)
+                    // And the player isn't moving or looking around or sitting, decrease timer
+                    if (!movementPressed && !ascendPressed && !lookPressed && !isSitting)
                     {
                         if (lookTimeoutDelta >= 0)
                         {
@@ -1221,14 +1225,27 @@ namespace UserBehaviour
 
         private void ManageHead()
         {
-            // Decrease head constraint weights over time, disable unnecessary infinite lerping
-            if (notLooking)
+            if (isSitting)
             {
-                DeactivateRig(headRig, headActivate_TRate);
+                if (notLooking)
+                {
+                    DeactivateRig(lookRig, headActivate_TRate);
+                }
+                else if (!notLooking)
+                {
+                    ActivateRig(lookRig, headDeactivate_TRate);
+                }
             }
-            else if (!notLooking)
+            else
             {
-                ActivateRig(headRig, headDeactivate_TRate);
+                if (notLooking)
+                {
+                    DeactivateRig(headRig, headActivate_TRate);
+                }
+                else if (!notLooking)
+                {
+                    ActivateRig(headRig, headDeactivate_TRate);
+                }
             }
         }
 
@@ -1332,7 +1349,7 @@ namespace UserBehaviour
                     StartCoroutine(WaveAnimation());
                 }
 
-                if (grounded && sitPressed)
+                if (grounded && !sitDelayed && sitPressed)
                 {
                     StartCoroutine(SitEnter());
                 }
@@ -1352,7 +1369,7 @@ namespace UserBehaviour
                     StartCoroutine(EndLoopAnimation(animIDisDancing));
                 }
 
-                if (isSitting && sitPressed)
+                if (sitDelayed && sitPressed)
                 {
                     StartCoroutine(SitExit());
                 }
@@ -1383,21 +1400,33 @@ namespace UserBehaviour
         private IEnumerator SitEnter()
         {
             inAnimation = true;
-            inStaticAnimation = true;
+            isSitting = true;
             MovementDisable();
             animator.SetBool(animIDisSitting, true);
-            yield return new WaitForSeconds(2f);
-            isSitting = true;
+
+            for (int i = 0; i < smoothCount; i++)
+            {
+                headRig.weight = Mathf.Lerp(headRig.weight, 0, i / smoothCount);
+                yield return new WaitForSeconds(smoothTime / smoothCount);
+            }
+
+            sitDelayed = true;
         }
 
         private IEnumerator SitExit()
         {
-            isSitting = false;
-            inStaticAnimation = false;
-            MovementEnable();
-            animator.SetBool(animIDisSitting, false);
-            yield return new WaitForSeconds(2f);
             inAnimation = false;
+            isSitting = false;
+            animator.SetBool(animIDisSitting, false);
+
+            for (int i = 0; i < smoothCount; i++)
+            {
+                lookRig.weight = Mathf.Lerp(headRig.weight, 0, i / smoothCount);
+                yield return new WaitForSeconds(smoothTime / smoothCount);
+            }
+
+            sitDelayed = false;
+            MovementEnable();
         }
 
         private void StartLoopAnimation(int animID)
