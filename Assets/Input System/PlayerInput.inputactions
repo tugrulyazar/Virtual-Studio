@@ -46,10 +46,42 @@
                     "interactions": "Press"
                 },
                 {
+                    "name": "Toggle Shoulder",
+                    "type": "Button",
+                    "id": "30bee7d7-2481-4b61-884f-ddfb5129b28a",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "Press"
+                },
+                {
                     "name": "Ascend",
                     "type": "Value",
                     "id": "c0c9c13a-42c4-47bf-a615-b5d20939cefd",
                     "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "Press"
+                },
+                {
+                    "name": "Toggle Flight",
+                    "type": "Button",
+                    "id": "98149652-4751-4fff-bf4c-01cacc6e5f84",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "Press"
+                },
+                {
+                    "name": "Wave",
+                    "type": "Button",
+                    "id": "28080b31-1392-4fee-8ded-7accdfb8358b",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "Press"
+                },
+                {
+                    "name": "Dance",
+                    "type": "Button",
+                    "id": "b6c3c63d-f947-4d18-9e55-5a3e1fb6ce51",
+                    "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "Press"
                 }
@@ -186,6 +218,50 @@
                     "action": "Ascend",
                     "isComposite": false,
                     "isPartOfComposite": true
+                },
+                {
+                    "name": "",
+                    "id": "9c5624e4-b09a-4ab0-a88c-85cbd45a708b",
+                    "path": "<Keyboard>/tab",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard + Mouse",
+                    "action": "Toggle Flight",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "efc15876-2da4-48ca-901d-03b59805c9c0",
+                    "path": "<Keyboard>/h",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard + Mouse",
+                    "action": "Wave",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6694aebb-88c9-4918-bb2e-a82122d52f96",
+                    "path": "<Keyboard>/j",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard + Mouse",
+                    "action": "Dance",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "00d6fce8-e510-4098-a2d3-252d143b3e6c",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard + Mouse",
+                    "action": "Toggle Shoulder",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         }

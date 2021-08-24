@@ -140,11 +140,16 @@ namespace UserBehaviour
 
         private bool movementPressed;
         private bool lookPressed;
-        private bool ascendPressed;
         private bool runPressed;
         private bool jumpPressed;
+        private bool flightTogglePressed;
+        private bool ascendPressed;
         private bool camTogglePressed;
+        private bool shoulderTogglePressed;
         private bool analogMovement;
+        private bool wavePressed;
+        private bool dancePressed;
+        private bool danceReleased;
 
         // Player
         private float speed;
@@ -270,6 +275,10 @@ namespace UserBehaviour
                 lookPressed = false;
             };
 
+            // Flight toggle
+            input.Player.ToggleFlight.performed += ctx => flightTogglePressed = ctx.ReadValueAsButton();
+            input.Player.ToggleFlight.canceled += ctx => flightTogglePressed = false;
+
             // Ascension
             input.Player.Ascend.performed += ctx =>
             {
@@ -290,9 +299,29 @@ namespace UserBehaviour
             input.Player.Jump.performed += ctx => jumpPressed = ctx.ReadValueAsButton();
             input.Player.Jump.canceled += ctx => jumpPressed = false;
 
-            // Camera toggle press
+            // Camera toggle
             input.Player.ToggleCamera.performed += ctx => camTogglePressed = ctx.ReadValueAsButton();
             input.Player.ToggleCamera.canceled += ctx => camTogglePressed = false;
+
+            // Camera toggle
+            input.Player.ToggleShoulder.performed += ctx => shoulderTogglePressed = ctx.ReadValueAsButton();
+            input.Player.ToggleShoulder.canceled += ctx => shoulderTogglePressed = false;
+
+            // Wave
+            input.Player.Wave.performed += ctx => wavePressed = ctx.ReadValueAsButton();
+            input.Player.Wave.canceled += ctx => wavePressed = false;
+
+            // Dance
+            input.Player.Dance.performed += ctx =>
+            {
+                dancePressed = true;
+                danceReleased = false;
+            };
+            input.Player.Dance.canceled += ctx =>
+            {
+                dancePressed = false;
+                danceReleased = true;
+            };
         }
 
         private void Start()
@@ -517,13 +546,13 @@ namespace UserBehaviour
         private void ManageFlight()
         {
             // Initiate flight if ready to jump
-            if (!isFlying && Input.GetKeyDown(KeyCode.Tab) && jumpTimeoutDelta <= 0.0f && !inAnimation)
+            if (!isFlying && flightTogglePressed && jumpTimeoutDelta <= 0.0f && !inAnimation)
             {
                 StartCoroutine(StartFlight());
             }
 
             // Stop flight if flying
-            if (isFlying && Input.GetKeyDown(KeyCode.Tab) && !inAnimation)
+            if (isFlying && flightTogglePressed && !inAnimation)
             {
                 StartCoroutine(EndFlight());
             }
@@ -1001,7 +1030,7 @@ namespace UserBehaviour
             }
 
             // Shoulder toggle
-            if (Input.GetKeyDown(KeyCode.R) && !CameraCoroutineInProgress && cameraMode == 0 && !zoomedIn)
+            if (shoulderTogglePressed && !CameraCoroutineInProgress && cameraMode == 0 && !zoomedIn)
             {
                 StartCoroutine(ShoulderChange());
             }
@@ -1214,9 +1243,12 @@ namespace UserBehaviour
                 activeCam.m_Lens.FieldOfView = cameraFov;
             }
 
-            // Lerp camera distance to zoom distance, kept dynamic because of scroll
-            cameraDistance = (cameraDistance < zoomDistance + 0.01f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * zoom_TRate);
-            camTPF.CameraDistance = cameraDistance;
+            if (cameraDistance != zoomDistance)
+            {
+                // Lerp camera distance to zoom distance
+                cameraDistance = (cameraDistance < zoomDistance + 0.01f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * zoom_TRate);
+                camTPF.CameraDistance = cameraDistance;
+            }
 
             // Change sensitivity
             if (rotationSpeed != zoomRotationSpeed) rotationSpeed = zoomRotationSpeed;
@@ -1271,13 +1303,13 @@ namespace UserBehaviour
             if (!inAnimation)
             {
                 // Wave animation one shot
-                if (Input.GetKeyDown(KeyCode.H))
+                if (wavePressed)
                 {
                     StartCoroutine(WaveAnimation());
                 }
 
                 // Dance animation loop start
-                if (grounded && Input.GetKeyDown(KeyCode.J))
+                if (grounded && dancePressed)
                 {
                     StartLoopAnimation(animIDisDancing);
                 }
@@ -1285,7 +1317,7 @@ namespace UserBehaviour
 
             // Stop loop animations
             // Dance animation loop stop
-            if (inLoopAnimation && Input.GetKeyUp(KeyCode.J))
+            if (inLoopAnimation && danceReleased)
             {
                 StartCoroutine(EndLoopAnimation(animIDisDancing));
             }
@@ -1323,7 +1355,7 @@ namespace UserBehaviour
         private IEnumerator EndLoopAnimation(int animID)
         {
             animator.SetBool(animID, false);
-            yield return new WaitForSeconds(3); // TODO: need to get animation clip length
+            yield return new WaitForSeconds(3.5f); // TODO: need to get animation clip length
             MovementEnable();
             inAnimation = false;
             inStaticAnimation = false;

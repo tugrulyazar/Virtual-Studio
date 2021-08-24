@@ -59,10 +59,42 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                     ""interactions"": ""Press""
                 },
                 {
+                    ""name"": ""Toggle Shoulder"",
+                    ""type"": ""Button"",
+                    ""id"": ""30bee7d7-2481-4b61-884f-ddfb5129b28a"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": ""Press""
+                },
+                {
                     ""name"": ""Ascend"",
                     ""type"": ""Value"",
                     ""id"": ""c0c9c13a-42c4-47bf-a615-b5d20939cefd"",
                     ""expectedControlType"": ""Axis"",
+                    ""processors"": """",
+                    ""interactions"": ""Press""
+                },
+                {
+                    ""name"": ""Toggle Flight"",
+                    ""type"": ""Button"",
+                    ""id"": ""98149652-4751-4fff-bf4c-01cacc6e5f84"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": ""Press""
+                },
+                {
+                    ""name"": ""Wave"",
+                    ""type"": ""Button"",
+                    ""id"": ""28080b31-1392-4fee-8ded-7accdfb8358b"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": ""Press""
+                },
+                {
+                    ""name"": ""Dance"",
+                    ""type"": ""Button"",
+                    ""id"": ""b6c3c63d-f947-4d18-9e55-5a3e1fb6ce51"",
+                    ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": ""Press""
                 }
@@ -199,6 +231,50 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                     ""action"": ""Ascend"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""9c5624e4-b09a-4ab0-a88c-85cbd45a708b"",
+                    ""path"": ""<Keyboard>/tab"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard + Mouse"",
+                    ""action"": ""Toggle Flight"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""efc15876-2da4-48ca-901d-03b59805c9c0"",
+                    ""path"": ""<Keyboard>/h"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard + Mouse"",
+                    ""action"": ""Wave"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""6694aebb-88c9-4918-bb2e-a82122d52f96"",
+                    ""path"": ""<Keyboard>/j"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard + Mouse"",
+                    ""action"": ""Dance"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""00d6fce8-e510-4098-a2d3-252d143b3e6c"",
+                    ""path"": ""<Keyboard>/r"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard + Mouse"",
+                    ""action"": ""Toggle Shoulder"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -229,7 +305,11 @@ public class @PlayerInput : IInputActionCollection, IDisposable
         m_Player_Jump = m_Player.FindAction("Jump", throwIfNotFound: true);
         m_Player_Run = m_Player.FindAction("Run", throwIfNotFound: true);
         m_Player_ToggleCamera = m_Player.FindAction("Toggle Camera", throwIfNotFound: true);
+        m_Player_ToggleShoulder = m_Player.FindAction("Toggle Shoulder", throwIfNotFound: true);
         m_Player_Ascend = m_Player.FindAction("Ascend", throwIfNotFound: true);
+        m_Player_ToggleFlight = m_Player.FindAction("Toggle Flight", throwIfNotFound: true);
+        m_Player_Wave = m_Player.FindAction("Wave", throwIfNotFound: true);
+        m_Player_Dance = m_Player.FindAction("Dance", throwIfNotFound: true);
     }
 
     public void Dispose()
@@ -284,7 +364,11 @@ public class @PlayerInput : IInputActionCollection, IDisposable
     private readonly InputAction m_Player_Jump;
     private readonly InputAction m_Player_Run;
     private readonly InputAction m_Player_ToggleCamera;
+    private readonly InputAction m_Player_ToggleShoulder;
     private readonly InputAction m_Player_Ascend;
+    private readonly InputAction m_Player_ToggleFlight;
+    private readonly InputAction m_Player_Wave;
+    private readonly InputAction m_Player_Dance;
     public struct PlayerActions
     {
         private @PlayerInput m_Wrapper;
@@ -294,7 +378,11 @@ public class @PlayerInput : IInputActionCollection, IDisposable
         public InputAction @Jump => m_Wrapper.m_Player_Jump;
         public InputAction @Run => m_Wrapper.m_Player_Run;
         public InputAction @ToggleCamera => m_Wrapper.m_Player_ToggleCamera;
+        public InputAction @ToggleShoulder => m_Wrapper.m_Player_ToggleShoulder;
         public InputAction @Ascend => m_Wrapper.m_Player_Ascend;
+        public InputAction @ToggleFlight => m_Wrapper.m_Player_ToggleFlight;
+        public InputAction @Wave => m_Wrapper.m_Player_Wave;
+        public InputAction @Dance => m_Wrapper.m_Player_Dance;
         public InputActionMap Get() { return m_Wrapper.m_Player; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -319,9 +407,21 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                 @ToggleCamera.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleCamera;
                 @ToggleCamera.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleCamera;
                 @ToggleCamera.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleCamera;
+                @ToggleShoulder.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleShoulder;
+                @ToggleShoulder.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleShoulder;
+                @ToggleShoulder.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleShoulder;
                 @Ascend.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAscend;
                 @Ascend.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAscend;
                 @Ascend.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAscend;
+                @ToggleFlight.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleFlight;
+                @ToggleFlight.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleFlight;
+                @ToggleFlight.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnToggleFlight;
+                @Wave.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnWave;
+                @Wave.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnWave;
+                @Wave.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnWave;
+                @Dance.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnDance;
+                @Dance.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnDance;
+                @Dance.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnDance;
             }
             m_Wrapper.m_PlayerActionsCallbackInterface = instance;
             if (instance != null)
@@ -341,9 +441,21 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                 @ToggleCamera.started += instance.OnToggleCamera;
                 @ToggleCamera.performed += instance.OnToggleCamera;
                 @ToggleCamera.canceled += instance.OnToggleCamera;
+                @ToggleShoulder.started += instance.OnToggleShoulder;
+                @ToggleShoulder.performed += instance.OnToggleShoulder;
+                @ToggleShoulder.canceled += instance.OnToggleShoulder;
                 @Ascend.started += instance.OnAscend;
                 @Ascend.performed += instance.OnAscend;
                 @Ascend.canceled += instance.OnAscend;
+                @ToggleFlight.started += instance.OnToggleFlight;
+                @ToggleFlight.performed += instance.OnToggleFlight;
+                @ToggleFlight.canceled += instance.OnToggleFlight;
+                @Wave.started += instance.OnWave;
+                @Wave.performed += instance.OnWave;
+                @Wave.canceled += instance.OnWave;
+                @Dance.started += instance.OnDance;
+                @Dance.performed += instance.OnDance;
+                @Dance.canceled += instance.OnDance;
             }
         }
     }
@@ -364,6 +476,10 @@ public class @PlayerInput : IInputActionCollection, IDisposable
         void OnJump(InputAction.CallbackContext context);
         void OnRun(InputAction.CallbackContext context);
         void OnToggleCamera(InputAction.CallbackContext context);
+        void OnToggleShoulder(InputAction.CallbackContext context);
         void OnAscend(InputAction.CallbackContext context);
+        void OnToggleFlight(InputAction.CallbackContext context);
+        void OnWave(InputAction.CallbackContext context);
+        void OnDance(InputAction.CallbackContext context);
     }
 }
