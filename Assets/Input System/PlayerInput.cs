@@ -97,6 +97,14 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": ""Press""
+                },
+                {
+                    ""name"": ""Sit"",
+                    ""type"": ""Button"",
+                    ""id"": ""f632c2e3-2a17-46ca-9e45-edfe0a7c9f5e"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": ""Press""
                 }
             ],
             ""bindings"": [
@@ -275,6 +283,17 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                     ""action"": ""Toggle Shoulder"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""69c021c1-9dd1-4109-b1b9-6ff4cf4029e9"",
+                    ""path"": ""<Keyboard>/x"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard + Mouse"",
+                    ""action"": ""Sit"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -310,6 +329,7 @@ public class @PlayerInput : IInputActionCollection, IDisposable
         m_Player_ToggleFlight = m_Player.FindAction("Toggle Flight", throwIfNotFound: true);
         m_Player_Wave = m_Player.FindAction("Wave", throwIfNotFound: true);
         m_Player_Dance = m_Player.FindAction("Dance", throwIfNotFound: true);
+        m_Player_Sit = m_Player.FindAction("Sit", throwIfNotFound: true);
     }
 
     public void Dispose()
@@ -369,6 +389,7 @@ public class @PlayerInput : IInputActionCollection, IDisposable
     private readonly InputAction m_Player_ToggleFlight;
     private readonly InputAction m_Player_Wave;
     private readonly InputAction m_Player_Dance;
+    private readonly InputAction m_Player_Sit;
     public struct PlayerActions
     {
         private @PlayerInput m_Wrapper;
@@ -383,6 +404,7 @@ public class @PlayerInput : IInputActionCollection, IDisposable
         public InputAction @ToggleFlight => m_Wrapper.m_Player_ToggleFlight;
         public InputAction @Wave => m_Wrapper.m_Player_Wave;
         public InputAction @Dance => m_Wrapper.m_Player_Dance;
+        public InputAction @Sit => m_Wrapper.m_Player_Sit;
         public InputActionMap Get() { return m_Wrapper.m_Player; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -422,6 +444,9 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                 @Dance.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnDance;
                 @Dance.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnDance;
                 @Dance.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnDance;
+                @Sit.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnSit;
+                @Sit.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnSit;
+                @Sit.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnSit;
             }
             m_Wrapper.m_PlayerActionsCallbackInterface = instance;
             if (instance != null)
@@ -456,6 +481,9 @@ public class @PlayerInput : IInputActionCollection, IDisposable
                 @Dance.started += instance.OnDance;
                 @Dance.performed += instance.OnDance;
                 @Dance.canceled += instance.OnDance;
+                @Sit.started += instance.OnSit;
+                @Sit.performed += instance.OnSit;
+                @Sit.canceled += instance.OnSit;
             }
         }
     }
@@ -481,5 +509,6 @@ public class @PlayerInput : IInputActionCollection, IDisposable
         void OnToggleFlight(InputAction.CallbackContext context);
         void OnWave(InputAction.CallbackContext context);
         void OnDance(InputAction.CallbackContext context);
+        void OnSit(InputAction.CallbackContext context);
     }
 }

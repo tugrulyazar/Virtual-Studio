@@ -128,6 +128,7 @@ namespace UserBehaviour
         private int animIDFreeFall;
         private int animIDMotionSpeed;
         private int animIDisFlying;
+        private int animIDisSitting;
         private int animIDisWaving;
         private int animIDisDancing;
         private int animIDturnLeft;
@@ -144,6 +145,7 @@ namespace UserBehaviour
         private bool lookPressed;
         private bool runPressed;
         private bool jumpPressed;
+        private bool sitPressed;
         private bool flightTogglePressed;
         private bool ascendPressed;
         private bool camTogglePressed;
@@ -236,6 +238,7 @@ namespace UserBehaviour
         public bool grounded;
 
         private bool isFlying;
+        private bool isSitting;
         private bool inRotation;
         private bool inAnimation;
         private bool inStaticAnimation;
@@ -301,6 +304,10 @@ namespace UserBehaviour
             input.Player.Jump.performed += ctx => jumpPressed = ctx.ReadValueAsButton();
             input.Player.Jump.canceled += ctx => jumpPressed = false;
 
+            // Sitting
+            input.Player.Sit.performed += ctx => sitPressed = ctx.ReadValueAsButton();
+            input.Player.Sit.canceled += ctx => sitPressed = false;
+
             // Camera toggle
             input.Player.ToggleCamera.performed += ctx => camTogglePressed = ctx.ReadValueAsButton();
             input.Player.ToggleCamera.canceled += ctx => camTogglePressed = false;
@@ -309,11 +316,11 @@ namespace UserBehaviour
             input.Player.ToggleShoulder.performed += ctx => shoulderTogglePressed = ctx.ReadValueAsButton();
             input.Player.ToggleShoulder.canceled += ctx => shoulderTogglePressed = false;
 
-            // Wave
+            // Waving
             input.Player.Wave.performed += ctx => wavePressed = ctx.ReadValueAsButton();
             input.Player.Wave.canceled += ctx => wavePressed = false;
 
-            // Dance
+            // Dancing
             input.Player.Dance.performed += ctx =>
             {
                 dancePressed = true;
@@ -346,6 +353,7 @@ namespace UserBehaviour
             // Set default states
             grounded = true;
             isFlying = false;
+            isSitting = false;
             inAnimation = false;
             inStaticAnimation = false;
             inLoopAnimation = false;
@@ -728,7 +736,7 @@ namespace UserBehaviour
                 {
                     isTargetValid = true;
                     lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * lookTarget_TRate);
-                    
+
                     // Place temp tag
                     if (Input.GetKeyDown(KeyCode.Mouse0))
                     {
@@ -1191,7 +1199,7 @@ namespace UserBehaviour
                     notLooking = true;
 
                     // And player isn't moving or looking around, decrease timer
-                    if (!movementPressed && !lookPressed && !ascendPressed)
+                    if (!movementPressed && !ascendPressed && !lookPressed)
                     {
                         if (lookTimeoutDelta >= 0)
                         {
@@ -1324,19 +1332,32 @@ namespace UserBehaviour
                     StartCoroutine(WaveAnimation());
                 }
 
+                if (grounded && sitPressed)
+                {
+                    StartCoroutine(SitEnter());
+                }
+
                 // Dance animation loop start
                 if (grounded && dancePressed)
                 {
                     StartLoopAnimation(animIDisDancing);
                 }
             }
-
-            // Stop loop animations
-            // Dance animation loop stop
-            if (inLoopAnimation && danceReleased)
+            else
             {
-                StartCoroutine(EndLoopAnimation(animIDisDancing));
+                // Stop loop animations
+                // Dance animation loop stop
+                if (inLoopAnimation && danceReleased)
+                {
+                    StartCoroutine(EndLoopAnimation(animIDisDancing));
+                }
+
+                if (isSitting && sitPressed)
+                {
+                    StartCoroutine(SitExit());
+                }
             }
+
         }
 
         private IEnumerator WaveAnimation()
@@ -1356,6 +1377,26 @@ namespace UserBehaviour
 
             // Enable jump after animation
             input.Player.Jump.Enable();
+            inAnimation = false;
+        }
+
+        private IEnumerator SitEnter()
+        {
+            inAnimation = true;
+            inStaticAnimation = true;
+            MovementDisable();
+            animator.SetBool(animIDisSitting, true);
+            yield return new WaitForSeconds(2f);
+            isSitting = true;
+        }
+
+        private IEnumerator SitExit()
+        {
+            isSitting = false;
+            inStaticAnimation = false;
+            MovementEnable();
+            animator.SetBool(animIDisSitting, false);
+            yield return new WaitForSeconds(2f);
             inAnimation = false;
         }
 
@@ -1425,6 +1466,7 @@ namespace UserBehaviour
             animIDFreeFall = Animator.StringToHash("FreeFall");
             animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
             animIDisFlying = Animator.StringToHash("isFlying");
+            animIDisSitting = Animator.StringToHash("isSitting");
             animIDisWaving = Animator.StringToHash("isWaving");
             animIDisDancing = Animator.StringToHash("isDancing");
             animIDturnLeft = Animator.StringToHash("turnLeft");

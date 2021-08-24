@@ -84,6 +84,14 @@
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "Press"
+                },
+                {
+                    "name": "Sit",
+                    "type": "Button",
+                    "id": "f632c2e3-2a17-46ca-9e45-edfe0a7c9f5e",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "Press"
                 }
             ],
             "bindings": [
@@ -260,6 +268,17 @@
                     "processors": "",
                     "groups": "Keyboard + Mouse",
                     "action": "Toggle Shoulder",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "69c021c1-9dd1-4109-b1b9-6ff4cf4029e9",
+                    "path": "<Keyboard>/x",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard + Mouse",
+                    "action": "Sit",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
