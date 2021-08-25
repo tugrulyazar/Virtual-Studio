@@ -16,6 +16,8 @@ namespace UserBehaviour
         private SkinnedMeshRenderer meshRenderer;
         [SerializeField] // Player head transform
         private Transform playerHead;
+        [SerializeField] // Player head transform
+        private GameObject wheelchair;
 
         [Header("Movement")]
         [SerializeField] // Move speed of the character in m/s
@@ -26,9 +28,9 @@ namespace UserBehaviour
         private float flySpeed = 4;
         [SerializeField] // Fast flying speed of the character in m/s
         private float fastFlySpeed = 8;
-        [SerializeField] // Acceleration and deceleration
+        [SerializeField] // Acceleration and deceleration rate
         private float groundAcceleration = 10.0f;
-        [SerializeField]
+        [SerializeField] // Flight acceleration and deceleration rate
         private float flyAcceleration = 3.0f;
 
         [Header("Jump")]
@@ -61,9 +63,9 @@ namespace UserBehaviour
         [SerializeField] // How fast the character turns to face movement direction
         [Range(0.0f, 0.3f)]
         private float rotationSmoothTime = 0.12f;
-        [SerializeField]
+        [SerializeField] // Camera layer mask for walking
         private LayerMask walkingLayermask;
-        [SerializeField]
+        [SerializeField] // Camera layer mask for flying/noclip
         private LayerMask flyingLayermask;
 
         [Space(10)]
@@ -133,6 +135,7 @@ namespace UserBehaviour
         private int animIDisSitting;
         private int animIDisWaving;
         private int animIDisDancing;
+        private int animIDonWheelchair;
         private int animIDturnLeft;
         private int animIDturnRight;
 
@@ -223,7 +226,7 @@ namespace UserBehaviour
         // Tag objects
         private const float deleteHoldTimeout = 2f;
 
-        private GameObject myTag;
+        private GameObject tempTag;
         private GameObject myDistTag;
 
         // Timeout deltatime
@@ -244,6 +247,7 @@ namespace UserBehaviour
 
         private bool isFlying;
         private bool isSitting;
+        private bool onWheelchair;
         private bool inRotation;
         private bool inAnimation;
         private bool inStaticAnimation;
@@ -286,6 +290,7 @@ namespace UserBehaviour
             grounded = true;
             isFlying = false;
             isSitting = false;
+            onWheelchair = false;
             inAnimation = false;
             inStaticAnimation = false;
             inLoopAnimation = false;
@@ -322,7 +327,11 @@ namespace UserBehaviour
             CheckTargetingStatus();
             ManageHead();
             ManagePointAndZoom();
-            ControlAnimations();
+
+            if (hasAnimator)
+            {
+                ControlAnimations();
+            }
         }
 
         private void LateUpdate()
@@ -365,7 +374,7 @@ namespace UserBehaviour
                 }
 
                 // Jump if ready to jump
-                if (jumpPressed && jumpTimeoutDelta <= 0.0f && !inAnimation)
+                if (jumpPressed && jumpTimeoutDelta <= 0.0f && !inAnimation && !onWheelchair)
                 {
                     // The square root of H * -2 * G = how much velocity needed to reach desired height
                     verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
@@ -486,7 +495,7 @@ namespace UserBehaviour
         private void ManageFlight()
         {
             // Initiate flight if ready to jump
-            if (!isFlying && flightTogglePressed && jumpTimeoutDelta <= 0.0f && !inAnimation)
+            if (!isFlying && flightTogglePressed && jumpTimeoutDelta <= 0.0f && !inAnimation && !onWheelchair)
             {
                 StartCoroutine(StartFlight());
             }
@@ -518,15 +527,16 @@ namespace UserBehaviour
             horizontalSpeed = 0f;
             verticalSpeed = 0f;
 
-            // Stop ground animations
+
             if (hasAnimator)
             {
+                // Stop ground animations
                 animator.SetFloat(animIDSpeed, 0);
                 animator.SetFloat(animIDMotionSpeed, 0);
-            }
 
-            // Flying state
-            animator.SetBool(animIDisFlying, true);
+                // Flying state
+                animator.SetBool(animIDisFlying, true);
+            }
 
             // Get current pos and target pos
             Vector3 targetPos = transform.position + new Vector3(0, flyJumpHeight, 0);
@@ -546,7 +556,10 @@ namespace UserBehaviour
         {
             isFlying = false;
             camTPF.CameraCollisionFilter = walkingLayermask;
-            animator.SetBool(animIDisFlying, false);
+            if (hasAnimator)
+            {
+                animator.SetBool(animIDisFlying, false);
+            }
             controller.enabled = true;
             yield return null;
         }
@@ -667,17 +680,17 @@ namespace UserBehaviour
                     isTargetValid = true;
                     lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * lookTarget_TRate);
 
-                    // Place temp tag
+                    // Move temp tag
                     if (Input.GetKeyDown(KeyCode.Mouse0))
                     {
-                        if (!myTag)
+                        if (!tempTag)
                         {
-                            myTag = Instantiate(tagObject);
-                            myTag.transform.position = hit.point;
+                            tempTag = Instantiate(tagObject);
+                            tempTag.transform.position = hit.point;
                         }
                         else
                         {
-                            myTag.transform.position = hit.point;
+                            tempTag.transform.position = hit.point;
                         }
 
                         // Open object context menu
@@ -774,10 +787,10 @@ namespace UserBehaviour
                     isTargetValid = false;
                 }
 
-                // If you're not clicking to a valid location
+                // If you're not clicking to a valid location, destroy temp tag
                 if (!isTargetValid && Input.GetKeyDown(KeyCode.Mouse0))
                 {
-                    Destroy(myTag);
+                    Destroy(tempTag);
                 }
 
                 // Destroy perm objects
@@ -861,7 +874,10 @@ namespace UserBehaviour
                 }
 
                 DeactivateRig(handRig, handDeactivate_TRate);
-                EnableCamToggle();
+                if (!onWheelchair)
+                {
+                    EnableCamToggle();
+                }
                 ZoomOut();
             }
         }
@@ -887,8 +903,8 @@ namespace UserBehaviour
                 // Cinemachine will follow this target
                 cinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + cameraAngleOverride, cinemachineTargetYaw, 0.0f);
 
-                // Delayed character rotation if not in animation
-                if (lookTimeoutDelta < 0 && !inAnimation)
+                // Delayed character rotation if not in animation or wheelchair
+                if (lookTimeoutDelta < 0 && !inAnimation && !onWheelchair)
                 {
                     StartCoroutine(RotateToTarget(lookTarget));
                 }
@@ -899,8 +915,11 @@ namespace UserBehaviour
                     StopCoroutine("RotateToTarget");
 
                     // Back to locomotion blend
-                    animator.SetBool(animIDturnLeft, false);
-                    animator.SetBool(animIDturnRight, false);
+                    if (hasAnimator)
+                    {
+                        animator.SetBool(animIDturnLeft, false);
+                        animator.SetBool(animIDturnRight, false);
+                    }
 
                     // Reset
                     lookTimeoutDelta = lookTimeout;
@@ -935,7 +954,7 @@ namespace UserBehaviour
             Vector3 targetDirection = new Vector3(dir.x, 0, dir.z);
             Quaternion targetRotation = Quaternion.LookRotation(targetDirection, Vector3.up);
 
-            if (!isFlying)
+            if (hasAnimator && !isFlying)
             {
                 // Do left/right standing turning animation
                 if (angleDir == -1)
@@ -956,8 +975,11 @@ namespace UserBehaviour
             } while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f);
 
             // Back to locomotion blend
-            animator.SetBool(animIDturnLeft, false);
-            animator.SetBool(animIDturnRight, false);
+            if (hasAnimator)
+            {
+                animator.SetBool(animIDturnLeft, false);
+                animator.SetBool(animIDturnRight, false);
+            }
 
             // Reset
             lookTimeoutDelta = lookTimeout;
@@ -1151,7 +1173,7 @@ namespace UserBehaviour
 
         private void ManageHead()
         {
-            if (isSitting)
+            if (isSitting || onWheelchair)
             {
                 if (notLooking)
                 {
@@ -1275,15 +1297,25 @@ namespace UserBehaviour
                     StartCoroutine(WaveAnimation());
                 }
 
-                if (grounded && !sitDelayed && sitPressed)
+                if (grounded && !onWheelchair && !sitDelayed && sitPressed)
                 {
                     StartCoroutine(SitEnter());
                 }
 
                 // Dance animation loop start
-                if (grounded && dancePressed)
+                if (grounded && !onWheelchair && dancePressed)
                 {
                     StartLoopAnimation(animIDisDancing);
+                }
+
+                if (grounded && !onWheelchair && Input.GetKeyDown(KeyCode.L))
+                {
+                    StartCoroutine(WheelchairEnter());
+                }
+
+                if (onWheelchair && Input.GetKeyDown(KeyCode.L))
+                {
+                    StartCoroutine(WheelchairExit());
                 }
             }
             else
@@ -1307,7 +1339,7 @@ namespace UserBehaviour
         {
             inAnimation = true;
 
-            // Disable jump while in animation
+            // Disable jump while waving
             input.Player.Jump.Disable();
 
             // To register animation only once
@@ -1318,7 +1350,7 @@ namespace UserBehaviour
             // Wait for the animation duration
             yield return new WaitForSeconds(4); // TODO: need to get animation clip length
 
-            // Enable jump after animation
+            // Enable jump after waving
             input.Player.Jump.Enable();
             inAnimation = false;
         }
@@ -1348,11 +1380,54 @@ namespace UserBehaviour
 
             for (int i = 0; i < smoothCount; i++)
             {
-                lookRig.weight = Mathf.Lerp(headRig.weight, 0, i / smoothCount);
+                lookRig.weight = Mathf.Lerp(lookRig.weight, 0, i / smoothCount);
                 yield return new WaitForSeconds(smoothTime / smoothCount);
             }
 
             sitDelayed = false;
+        }
+
+        private IEnumerator WheelchairEnter()
+        {
+            yield return new WaitForEndOfFrame();
+            inAnimation = true;
+            onWheelchair = true;
+            DisableCamToggle();
+            input.Player.Run.Disable();
+            animator.SetBool(animIDonWheelchair, true);
+            controller.slopeLimit = 7f;
+            controller.stepOffset = 0.03f;
+
+            wheelchair.SetActive(true);
+
+            for (int i = 0; i < smoothCount; i++)
+            {
+                headRig.weight = Mathf.Lerp(headRig.weight, 0, i / smoothCount);
+                yield return new WaitForSeconds(smoothTime / smoothCount);
+            }
+
+            inAnimation = false;
+        }
+
+        private IEnumerator WheelchairExit()
+        {
+            inAnimation = true;
+            onWheelchair = false;
+            EnableCamToggle();
+            input.Player.Run.Enable();
+            animator.SetBool(animIDonWheelchair, false);
+            controller.slopeLimit = 45f;
+            controller.stepOffset = 0.25f;
+
+            wheelchair.SetActive(false);
+
+            for (int i = 0; i < smoothCount; i++)
+            {
+                lookRig.weight = Mathf.Lerp(lookRig.weight, 0, i / smoothCount);
+                yield return new WaitForSeconds(smoothTime / smoothCount);
+            }
+
+            inAnimation = false;
         }
 
         private void StartLoopAnimation(int animID)
@@ -1503,6 +1578,7 @@ namespace UserBehaviour
             animIDisSitting = Animator.StringToHash("isSitting");
             animIDisWaving = Animator.StringToHash("isWaving");
             animIDisDancing = Animator.StringToHash("isDancing");
+            animIDonWheelchair = Animator.StringToHash("onWheelchair");
             animIDturnLeft = Animator.StringToHash("turnLeft");
             animIDturnRight = Animator.StringToHash("turnRight");
         }
