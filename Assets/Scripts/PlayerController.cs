@@ -12,11 +12,11 @@ namespace UserBehaviour
     public class PlayerController : MonoBehaviour
     {
         [Header("Player")]
-        [SerializeField] // Player model
+        [SerializeField] // Character mesh renderer
         private SkinnedMeshRenderer meshRenderer;
         [SerializeField] // Player head transform
         private Transform playerHead;
-        [SerializeField] // Player head transform
+        [SerializeField] // Wheelchair model
         private GameObject wheelchair;
 
         [Header("Movement")]
@@ -220,7 +220,8 @@ namespace UserBehaviour
         // Dynamic targeting variables
         private Rig handRig;
 
-        private RaycastHit hit;
+        private RaycastHit aimHit;
+        private RaycastHit wheelchairHit;
         private float angleDir;
 
         // Tag objects
@@ -238,7 +239,7 @@ namespace UserBehaviour
         // Constant variables
         private const float camRotateThreshold = 0.01f;
         private const float speedOffset = 0.1f;
-        private const float smoothTime = 2f;
+        private const float smoothTime = 1f;
         private const float smoothCount = smoothTime * 60;
 
 
@@ -255,6 +256,7 @@ namespace UserBehaviour
         private bool isTargetValid;
         private bool notLooking;
         private bool zoomedIn;
+        private bool zoomedOut;
         private bool sitDelayed;
 
         private void Awake()
@@ -297,6 +299,7 @@ namespace UserBehaviour
             isTargetValid = false;
             notLooking = false;
             zoomedIn = false;
+            zoomedOut = true;
             sitDelayed = false;
 
             // Set active hand
@@ -331,6 +334,11 @@ namespace UserBehaviour
             if (hasAnimator)
             {
                 ControlAnimations();
+            }
+
+            if (onWheelchair)
+            {
+                wheelchairRotate();
             }
         }
 
@@ -675,10 +683,10 @@ namespace UserBehaviour
                 ZoomIn();
 
                 // Move the pointing to the center of the screen
-                if (Physics.Raycast(mainCamera.position, mainCamera.forward, out hit, raycastDistance, raycastLayerMask))
+                if (Physics.Raycast(mainCamera.position, mainCamera.forward, out aimHit, raycastDistance, raycastLayerMask))
                 {
                     isTargetValid = true;
-                    lookTarget.position = Vector3.Lerp(lookTarget.position, hit.point, Time.deltaTime * lookTarget_TRate);
+                    lookTarget.position = Vector3.Lerp(lookTarget.position, aimHit.point, Time.deltaTime * lookTarget_TRate);
 
                     // Move temp tag
                     if (Input.GetKeyDown(KeyCode.Mouse0))
@@ -686,11 +694,11 @@ namespace UserBehaviour
                         if (!tempTag)
                         {
                             tempTag = Instantiate(tagObject);
-                            tempTag.transform.position = hit.point;
+                            tempTag.transform.position = aimHit.point;
                         }
                         else
                         {
-                            tempTag.transform.position = hit.point;
+                            tempTag.transform.position = aimHit.point;
                         }
 
                         // Open object context menu
@@ -703,13 +711,13 @@ namespace UserBehaviour
                     // Spawn perm tag
                     if (Input.GetKeyDown(KeyCode.E))
                     {
-                        if (!hit.transform.CompareTag("PermObject"))
+                        if (!aimHit.transform.CompareTag("PermObject"))
                         {
-                            Instantiate(permObject, hit.point, Quaternion.identity);
+                            Instantiate(permObject, aimHit.point, Quaternion.identity);
                         }
                         else
                         {
-                            Destroy(hit.transform.gameObject);
+                            Destroy(aimHit.transform.gameObject);
                         }
                     }
 
@@ -730,13 +738,13 @@ namespace UserBehaviour
                                     Destroy(obj);
                                 }
                                 // Instantiate a new one
-                                Instantiate(distObject, hit.point, Quaternion.identity);
+                                Instantiate(distObject, aimHit.point, Quaternion.identity);
                             }
                             else if (distObjects.Length == 1)
                             {
                                 // Instantiate second object
                                 myDistTag = Instantiate(distObject);
-                                myDistTag.transform.position = hit.point;
+                                myDistTag.transform.position = aimHit.point;
 
                                 // Get distance
                                 Vector3 start = distObjects[0].transform.position;
@@ -762,7 +770,7 @@ namespace UserBehaviour
                             {
                                 // If there isn't any, spawn first object
                                 myDistTag = Instantiate(distObject);
-                                myDistTag.transform.position = hit.point;
+                                myDistTag.transform.position = aimHit.point;
                             }
                         }
                         // Reset timer
@@ -772,13 +780,13 @@ namespace UserBehaviour
                     // Spawn elevation tag
                     if (Input.GetKeyDown(KeyCode.T))
                     {
-                        if (!hit.transform.CompareTag("ElevationObject"))
+                        if (!aimHit.transform.CompareTag("ElevationObject"))
                         {
-                            Instantiate(elevationObject, hit.point, Quaternion.identity);
+                            Instantiate(elevationObject, aimHit.point, Quaternion.identity);
                         }
                         else
                         {
-                            Destroy(hit.transform.gameObject);
+                            Destroy(aimHit.transform.gameObject);
                         }
                     }
                 }
@@ -860,7 +868,8 @@ namespace UserBehaviour
             }
 
             // Zoom out
-            else if (handRig.weight != 0 || cameraFov != originalFov || cameraDistance != originalDistance)
+
+            else if (!zoomedOut)
             {
                 if (cameraMode == 0)
                 {
@@ -874,12 +883,17 @@ namespace UserBehaviour
                 }
 
                 DeactivateRig(handRig, handDeactivate_TRate);
+
                 if (!onWheelchair)
                 {
                     EnableCamToggle();
                 }
+
                 ZoomOut();
             }
+
+            // Zoomed out flag
+            zoomedOut = (handRig.weight == 0 || cameraFov == originalFov || cameraDistance == originalDistance);
         }
 
         private void CameraRotation()
@@ -1006,7 +1020,7 @@ namespace UserBehaviour
             }
 
             // Shoulder toggle
-            if (shoulderTogglePressed && !CameraCoroutineInProgress && cameraMode == 0 && !zoomedIn)
+            if (shoulderTogglePressed && !CameraCoroutineInProgress && cameraMode == 0 && zoomedOut)
             {
                 StartCoroutine(ShoulderChange());
             }
@@ -1202,7 +1216,7 @@ namespace UserBehaviour
             if (rig.weight != 1)
             {
                 // Lerp rig constraint weights
-                rig.weight = (rig.weight > 0.99) ? 1 : Mathf.Lerp(rig.weight, 1, Time.deltaTime * rate);
+                rig.weight = (rig.weight > 0.999) ? 1 : Mathf.Lerp(rig.weight, 1, Time.deltaTime * rate);
             }
         }
 
@@ -1211,7 +1225,7 @@ namespace UserBehaviour
             if (rig.weight != 0)
             {
                 // Lerp rig constraint weights
-                rig.weight = (rig.weight < 0.01) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * rate); // TODO: Fix deactivation - even the smallest weight in rig is causing head to twitch
+                rig.weight = (rig.weight < 0.001) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * rate); // TODO: Fix deactivation - even the smallest weight in rig is causing head to twitch
             }
         }
 
@@ -1235,7 +1249,7 @@ namespace UserBehaviour
             if (cameraDistance != zoomDistance)
             {
                 // Lerp camera distance to zoom distance
-                cameraDistance = (cameraDistance < zoomDistance + 0.01f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * zoom_TRate);
+                cameraDistance = (cameraDistance < zoomDistance + 0.001f) ? zoomDistance : Mathf.Lerp(cameraDistance, zoomDistance, Time.deltaTime * zoom_TRate);
                 camTPF.CameraDistance = cameraDistance;
             }
 
@@ -1267,7 +1281,7 @@ namespace UserBehaviour
             if (cameraDistance != originalDistance)
             {
                 // Lerp camera distance to original
-                cameraDistance = (cameraDistance > originalDistance - 0.01f) ? originalDistance : Mathf.Lerp(cameraDistance, originalDistance, Time.deltaTime * zoom_TRate);
+                cameraDistance = (cameraDistance > originalDistance - 0.001f) ? originalDistance : Mathf.Lerp(cameraDistance, originalDistance, Time.deltaTime * zoom_TRate);
                 camTPF.CameraDistance = cameraDistance;
             }
 
@@ -1308,7 +1322,7 @@ namespace UserBehaviour
                     StartLoopAnimation(animIDisDancing);
                 }
 
-                if (grounded && !onWheelchair && Input.GetKeyDown(KeyCode.L))
+                if (grounded && !onWheelchair && cameraMode != 1 && Input.GetKeyDown(KeyCode.L))
                 {
                     StartCoroutine(WheelchairEnter());
                 }
@@ -1428,6 +1442,17 @@ namespace UserBehaviour
             }
 
             inAnimation = false;
+        }
+
+        private void wheelchairRotate()
+        {
+            if (Physics.Raycast(transform.position + Vector3.up, Vector3.down, out wheelchairHit, 1.5f))
+            {
+                Vector3 front = Vector3.Cross(transform.right, wheelchairHit.normal);
+                Quaternion targetRotation = Quaternion.LookRotation(front, wheelchairHit.normal);
+                wheelchair.transform.rotation = Quaternion.Lerp(wheelchair.transform.rotation, targetRotation, Time.deltaTime * lookTarget_TRate);
+                // TODO: Rotate character somehow...
+            }
         }
 
         private void StartLoopAnimation(int animID)
