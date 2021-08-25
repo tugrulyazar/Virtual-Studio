@@ -143,6 +143,7 @@ namespace UserBehaviour
         private PlayerInput input;
 
         private Vector2 currentMovement;
+        private int currentMovementDir;
         private Vector2 currentLook;
         private float currentAscension;
 
@@ -535,7 +536,6 @@ namespace UserBehaviour
             horizontalSpeed = 0f;
             verticalSpeed = 0f;
 
-
             if (hasAnimator)
             {
                 // Stop ground animations
@@ -587,7 +587,7 @@ namespace UserBehaviour
             // Check if movement is analog (for controller input) - between 0 and 1
             analogMovement = (currentMovement.x > 0f && currentMovement.x < 1.0f) || (currentMovement.y > 0f && currentMovement.y < 1.0f);
 
-            // If the movement isn't analog, then make the magnitude 1
+            // If the movement isn't analog, make the magnitude 1
             float inputMagnitude = analogMovement ? currentMovement.magnitude : 1f;
 
             // Accelerate or decelerate to target horizontal speed
@@ -633,11 +633,14 @@ namespace UserBehaviour
                     // Rotate to face input direction relative to camera position
                     transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
                 }
-
             }
 
+            // Get movement direction for reversing flight ascension
+            if (currentMovement.y > 0) currentMovementDir = 1;
+            else if (currentMovement.y < 0) currentMovementDir = -1;
+
             // Get look direction
-            Vector3 lookDirection = Quaternion.Euler(mainCamera.eulerAngles.x, targetRotation, 0.0f) * Vector3.forward;
+            Vector3 lookDirection = Quaternion.Euler(mainCamera.eulerAngles.x * currentMovementDir, targetRotation, 0.0f) * Vector3.forward;
 
             // Move the player
             transform.position += (horizontalSpeed * lookDirection.normalized + verticalSpeed * Vector3.up) * Time.deltaTime;
@@ -868,7 +871,6 @@ namespace UserBehaviour
             }
 
             // Zoom out
-
             else if (!zoomedOut)
             {
                 if (cameraMode == 0)
@@ -1159,7 +1161,7 @@ namespace UserBehaviour
             }
             else
             {
-                // If the target is behind 
+                // If the target is behind
                 if (angle > frontAngle)
                 {
                     notLooking = true;
@@ -1346,7 +1348,6 @@ namespace UserBehaviour
                     StartCoroutine(SitExit());
                 }
             }
-
         }
 
         private IEnumerator WaveAnimation()
