@@ -635,8 +635,9 @@ namespace UserBehaviour
                 }
             }
 
-            // Get movement direction for reversing flight ascension
-            if (currentMovement.y > 0) currentMovementDir = 1;
+            // Get movement direction for reversing flight ascension and culling vertical movement on strafe
+            if (currentMovement.y == 0) currentMovementDir = 0;
+            else if (currentMovement.y > 0 )currentMovementDir = 1;
             else if (currentMovement.y < 0) currentMovementDir = -1;
 
             // Get look direction
