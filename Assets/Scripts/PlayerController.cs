@@ -23,11 +23,11 @@ namespace UserBehaviour
         [SerializeField] // Move speed of the character in m/s
         private float moveSpeed = 2.0f;
         [SerializeField] // Sprint speed of the character in m/s
-        private float sprintSpeed = 5.335f;
+        private float sprintSpeed = 6f;
         [SerializeField] // Flying speed of the character in m/s
-        private float flySpeed = 4;
+        private float flySpeed = 4f;
         [SerializeField] // Fast flying speed of the character in m/s
-        private float fastFlySpeed = 8;
+        private float fastFlySpeed = 20f;
         [SerializeField] // Acceleration and deceleration rate
         private float groundAcceleration = 10.0f;
         [SerializeField] // Flight acceleration and deceleration rate
@@ -72,7 +72,7 @@ namespace UserBehaviour
         [SerializeField] // How far in degrees can you move the camera up
         private float topClamp = 60.0f;
         [SerializeField] // How far in degrees can you move the camera down
-        private float bottomClamp = 60.0f;
+        private float bottomClamp = 70.0f;
         [SerializeField] // Additional degress to override the camera. Useful for fine tuning camera position when locked
         private float cameraAngleOverride = 0.0f;
         [SerializeField]  // For locking the camera position on all axis
@@ -99,7 +99,7 @@ namespace UserBehaviour
         private float frontAngle = 100;
         [SerializeField] // Raycast max distance for pointing
         [Range(5, 100)]
-        private float raycastDistance = 10;
+        private float raycastDistance = 30;
         [SerializeField] // Raycast layer mask
         private LayerMask raycastLayerMask;
 
@@ -643,7 +643,8 @@ namespace UserBehaviour
             Vector3 lookDirection = Quaternion.Euler(mainCamera.eulerAngles.x * currentMovementDir, targetRotation, 0.0f) * Vector3.forward;
 
             // Move the player
-            transform.position += (horizontalSpeed * lookDirection.normalized + verticalSpeed * Vector3.up) * Time.deltaTime;
+            Vector3 moveDirection = Vector3.ClampMagnitude((horizontalSpeed * lookDirection + verticalSpeed * Vector3.up), fastFlySpeed);
+            transform.position += moveDirection * Time.deltaTime;
 
             // Update animator if using character
             if (hasAnimator)
@@ -1227,7 +1228,7 @@ namespace UserBehaviour
             if (rig.weight != 0)
             {
                 // Lerp rig constraint weights
-                rig.weight = (rig.weight < 0.001) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * rate); // TODO: Fix deactivation - even the smallest weight in rig is causing head to twitch
+                rig.weight = (rig.weight < 0.001) ? 0 : Mathf.Lerp(rig.weight, 0, Time.deltaTime * rate); // TODO: Fix deactivation - reactivation in rig is causing head to twitch
             }
         }
 
@@ -1363,7 +1364,7 @@ namespace UserBehaviour
             animator.SetBool(animIDisWaving, false);
 
             // Wait for the animation duration
-            yield return new WaitForSeconds(4); // TODO: need to get animation clip length
+            yield return new WaitForSeconds(4);
 
             // Enable jump after waving
             input.Player.Jump.Enable();
@@ -1468,7 +1469,7 @@ namespace UserBehaviour
         private IEnumerator EndLoopAnimation(int animID)
         {
             animator.SetBool(animID, false);
-            yield return new WaitForSeconds(3.5f); // TODO: need to get animation clip length
+            yield return new WaitForSeconds(3.5f);
             MovementEnable();
             inAnimation = false;
             inStaticAnimation = false;

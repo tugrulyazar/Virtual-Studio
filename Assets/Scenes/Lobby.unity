@@ -6429,12 +6429,12 @@ MonoBehaviour:
   groundAcceleration: 10
   flyAcceleration: 3
   jumpHeight: 1.2
-  flyJumpHeight: 1.2
+  flyJumpHeight: 2
   gravity: -15
   jumpTimeout: 0.5
   fallTimeout: 0.15
   groundedOffset: -0.14
-  groundedRadius: 0.28
+  groundedRadius: 0.15
   groundLayers:
     serializedVersion: 2
     m_Bits: 129
