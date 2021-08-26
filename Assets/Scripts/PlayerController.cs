@@ -1412,7 +1412,7 @@ namespace UserBehaviour
             DisableCamToggle();
             input.Player.Run.Disable();
             animator.SetBool(animIDonWheelchair, true);
-            controller.slopeLimit = 7f;
+            controller.slopeLimit = 9.5f;
             controller.stepOffset = 0.03f;
 
             wheelchair.SetActive(true);
