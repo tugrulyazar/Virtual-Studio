@@ -6467,8 +6467,9 @@ MonoBehaviour:
   permObject: {fileID: 2134720236750715303, guid: 022cd9d483ee24844a75d1f88dde69ca, type: 3}
   distObject: {fileID: 2134720236750715303, guid: cd9409e8acd95584bb5d6954e42f4ba7, type: 3}
   distLine: {fileID: 3999916806215343190, guid: 90eb2d50daf572c45b9b76d82d35e32f, type: 3}
-  textObject: {fileID: 2726429467195485600, guid: fb91dfd20da13b840a6f7af7e615db1d, type: 3}
-  elevationObject: {fileID: 2134720236750715303, guid: 3786eb33bcaad10499e2897f92185dd6, type: 3}
+  textObject: {fileID: 2726429467195485600, guid: cfe440c285f2dd84fa2f630b84a56479, type: 3}
+  aimTextObject: {fileID: 2726429467195485600, guid: 582e2fb0cb062f84eadf9e38e3a30af0, type: 3}
+  elevationObject: {fileID: 6402495745514927841, guid: b003fd7543122fd408cf2111852b15e3, type: 3}
   crosshair: {fileID: 337897537}
   tagMenu: {fileID: 1189273313}
   grounded: 0
