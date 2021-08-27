@@ -210,11 +210,11 @@ namespace UserBehaviour
 
         // Targeting: head look, hand point and zoom
         private const float handActivate_TRate = 6;
-        private const float handDeactivate_TRate = 8;
+        private const float handDeactivate_TRate = 10;
         private const float headActivate_TRate = 2;
         private const float headDeactivate_TRate = 1;
         private const float lookTarget_TRate = 5;
-        private const float zoom_TRate = 4;
+        private const float zoom_TRate = 6;
         private const float shoulderSwitch_TRate = 5;
         private const float lookTimeout = 2f;
 
@@ -897,7 +897,7 @@ namespace UserBehaviour
             }
 
             // Zoomed out flag
-            zoomedOut = (handRig.weight == 0 || cameraFov == originalFov || cameraDistance == originalDistance);
+            zoomedOut = !(handRig.weight != 0 || cameraFov != originalFov || cameraDistance != originalDistance);
         }
 
         private void CameraRotation()
