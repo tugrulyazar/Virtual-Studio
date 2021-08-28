@@ -215,6 +215,7 @@ namespace UserBehaviour
         private const float headDeactivate_TRate = 1;
         private const float lookTarget_TRate = 5;
         private const float zoom_TRate = 6;
+        private const float wheelchairRotate_TRate = 10;
         private const float shoulderSwitch_TRate = 5;
         private const float lookTimeout = 2f;
 
@@ -637,7 +638,7 @@ namespace UserBehaviour
 
             // Get movement direction for reversing flight ascension and culling vertical movement on strafe
             if (currentMovement.y == 0) currentMovementDir = 0;
-            else if (currentMovement.y > 0 )currentMovementDir = 1;
+            else if (currentMovement.y > 0) currentMovementDir = 1;
             else if (currentMovement.y < 0) currentMovementDir = -1;
 
             // Get look direction
@@ -787,11 +788,14 @@ namespace UserBehaviour
                     {
                         if (!aimHit.transform.CompareTag("ElevationObject"))
                         {
+                            // If the pointed location isn't an elevation object, spawn
                             Instantiate(elevationObject, aimHit.point, Quaternion.identity);
                         }
                         else
                         {
+                            // Else, destroy and reduce marker count
                             Destroy(aimHit.transform.gameObject);
+                            SetElevation.markerCount--;
                         }
                     }
                 }
@@ -1449,12 +1453,12 @@ namespace UserBehaviour
 
         private void wheelchairRotate()
         {
-            if (Physics.Raycast(transform.position + Vector3.up, Vector3.down, out wheelchairHit, 1.5f))
+            if (Physics.Raycast(transform.position + Vector3.up, Vector3.down, out wheelchairHit, 1.1f))
             {
                 Vector3 front = Vector3.Cross(transform.right, wheelchairHit.normal);
                 Quaternion targetRotation = Quaternion.LookRotation(front, wheelchairHit.normal);
-                wheelchair.transform.rotation = Quaternion.Lerp(wheelchair.transform.rotation, targetRotation, Time.deltaTime * lookTarget_TRate);
-                // TODO: Rotate character somehow...
+                wheelchair.transform.rotation = Quaternion.Lerp(wheelchair.transform.rotation, targetRotation, Time.deltaTime * wheelchairRotate_TRate);
+                // transform.rotation = Quaternion.Euler(targetRotation.eulerAngles.x, transform.rotation.eulerAngles.y, targetWRotation.eulerAngles.z);
             }
         }
 
