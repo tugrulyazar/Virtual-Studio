@@ -18,6 +18,8 @@ namespace UserBehaviour
         private Transform playerHead;
         [SerializeField] // Wheelchair model
         private GameObject wheelchair;
+        [SerializeField] // Character geometry
+        private GameObject geometry;
 
         [Header("Movement")]
         [SerializeField] // Move speed of the character in m/s
@@ -1434,6 +1436,8 @@ namespace UserBehaviour
                 yield return new WaitForSeconds(smoothTime / smoothCount);
             }
 
+            headRig.weight = 0;
+
             inAnimation = false;
         }
 
@@ -1452,8 +1456,12 @@ namespace UserBehaviour
             for (int i = 0; i < smoothCount; i++)
             {
                 lookRig.weight = Mathf.Lerp(lookRig.weight, 0, i / smoothCount);
+                geometry.transform.localRotation = Quaternion.Lerp(geometry.transform.localRotation, Quaternion.Euler(0, 0, 0), i / smoothCount);
                 yield return new WaitForSeconds(smoothTime / smoothCount);
             }
+
+            lookRig.weight = 0;
+            geometry.transform.localRotation = Quaternion.Euler(0, 0, 0);
 
             inAnimation = false;
         }
@@ -1465,7 +1473,7 @@ namespace UserBehaviour
                 Vector3 front = Vector3.Cross(transform.right, wheelchairHit.normal);
                 Quaternion targetRotation = Quaternion.LookRotation(front, wheelchairHit.normal);
                 wheelchair.transform.rotation = Quaternion.Lerp(wheelchair.transform.rotation, targetRotation, Time.deltaTime * wheelchairRotate_TRate);
-                // transform.rotation = Quaternion.Euler(targetRotation.eulerAngles.x, transform.rotation.eulerAngles.y, targetWRotation.eulerAngles.z);
+                geometry.transform.rotation = wheelchair.transform.rotation;
             }
         }
 

@@ -95,7 +95,7 @@ namespace UserBehaviour
                 }
                 else if (microSize)
                 {
-                    playerController.groundedOffset = -0.01f;
+                    playerController.groundedOffset = 0f;
                 }
                 
                 playerController.groundedRadius *= scale;
