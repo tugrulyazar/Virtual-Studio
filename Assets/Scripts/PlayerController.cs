@@ -21,13 +21,13 @@ namespace UserBehaviour
 
         [Header("Movement")]
         [SerializeField] // Move speed of the character in m/s
-        private float moveSpeed = 2.0f;
+        public float moveSpeed = 2.0f;
         [SerializeField] // Sprint speed of the character in m/s
-        private float sprintSpeed = 6f;
+        public float sprintSpeed = 6f;
         [SerializeField] // Flying speed of the character in m/s
-        private float flySpeed = 4f;
+        public float flySpeed = 4f;
         [SerializeField] // Fast flying speed of the character in m/s
-        private float fastFlySpeed = 20f;
+        public float fastFlySpeed = 20f;
         [SerializeField] // Acceleration and deceleration rate
         private float groundAcceleration = 10.0f;
         [SerializeField] // Flight acceleration and deceleration rate
@@ -35,11 +35,11 @@ namespace UserBehaviour
 
         [Header("Jump")]
         [SerializeField] // The height the player can jump
-        private float jumpHeight = 1.2f;
+        public float jumpHeight = 1.2f;
         [SerializeField] // The height the player jumps when initiating flight
-        private float flyJumpHeight = 2f;
+        public float flyJumpHeight = 2f;
         [SerializeField] // The character uses its own gravity value. The engine default is -9.81f
-        private float gravity = -15.0f;
+        public float gravity = -15.0f;
         [SerializeField] // Time required to pass before being able to jump again. Set to 0f to instantly jump again
         private float jumpTimeout = 0.50f;
         [SerializeField] // Time required to pass before entering the fall state. Useful for walking down stairs
@@ -58,8 +58,8 @@ namespace UserBehaviour
         private GameObject TPPCamera;
         [SerializeField] // First person camera object
         private GameObject FPPCamera;
-        [SerializeField] // The follow target set in the Cinemachine Virtual Camera that the camera will follow
-        private GameObject cinemachineCameraTarget;
+        [SerializeField] // Camera target, for initilization, third person perspective
+        private Transform cinemachineCameraTarget;
         [SerializeField] // How fast the character turns to face movement direction
         [Range(0.0f, 0.3f)]
         private float rotationSmoothTime = 0.12f;
@@ -93,13 +93,13 @@ namespace UserBehaviour
         [Space(10)]
         [SerializeField] // Look target distance from face
         [Range(1f, 10f)]
-        private float targetDistance = 4;
+        public float targetDistance = 4;
         [SerializeField] // Front side angle range from body forward
         [Range(30f, 180f)]
         private float frontAngle = 100;
         [SerializeField] // Raycast max distance for pointing
         [Range(5, 100)]
-        private float raycastDistance = 30;
+        public float raycastDistance = 30;
         [SerializeField] // Raycast layer mask
         private LayerMask raycastLayerMask;
 
@@ -124,6 +124,7 @@ namespace UserBehaviour
         // Animator component
         private Animator animator;
         private bool hasAnimator;
+        [HideInInspector] public float animSpeedMultiplier = 1;
 
         // Animation IDs
         private int animIDSpeed;
@@ -180,7 +181,7 @@ namespace UserBehaviour
         private Transform mainCamera;
         private CinemachineBrain cinemachineBrain;
         private CinemachineVirtualCamera activeCam;
-        private Cinemachine3rdPersonFollow camTPF;
+        [HideInInspector] public Cinemachine3rdPersonFollow camTPF;
         private CinemachineBasicMultiChannelPerlin camNoise;
 
         private float cinemachineTargetYaw;
@@ -188,19 +189,19 @@ namespace UserBehaviour
 
         // Camera fov and distances
         private float originalFov;
-        private float originalDistance;
+        [HideInInspector] public float originalDistance;
 
         private const float zoomFov = 30;
-        private const float minZoomOffset = 2f;
-        private const float maxZoomOffset = 6f;
+        [HideInInspector] public float minZoomOffset = 2f;
+        [HideInInspector] public float maxZoomOffset = 6f;
         private const float zoomRotationSpeed = 0.3f;
         private const float normalRotationSpeed = 1f;
 
         // Dynamic camera variables
         private float cameraFov;
-        private float cameraDistance;
-        private float zoomDistance;
-        private float zoomOffset;
+        [HideInInspector] public float cameraDistance;
+        [HideInInspector] public float zoomDistance;
+        [HideInInspector] public float zoomOffset;
         private float shoulderSide;
         private float rotationSpeed = 1.0f;
 
@@ -246,7 +247,7 @@ namespace UserBehaviour
 
 
         // States
-        public bool grounded;
+        [HideInInspector] public bool grounded;
 
         private bool isFlying;
         private bool isSitting;
@@ -497,7 +498,7 @@ namespace UserBehaviour
             // Update animator if using character
             if (hasAnimator)
             {
-                animator.SetFloat(animIDSpeed, speed);
+                animator.SetFloat(animIDSpeed, speed * animSpeedMultiplier);
                 animator.SetFloat(animIDMotionSpeed, inputMagnitude);
             }
         }
@@ -658,7 +659,7 @@ namespace UserBehaviour
             if (hasAnimator)
             {
                 // Use animation blend only with horizontal movement
-                animator.SetFloat(animIDSpeed, horizontalSpeed);
+                animator.SetFloat(animIDSpeed, horizontalSpeed * animSpeedMultiplier);
             }
         }
 
@@ -929,7 +930,7 @@ namespace UserBehaviour
                 cinemachineTargetPitch = ClampAngle(cinemachineTargetPitch, -topClamp, bottomClamp);
 
                 // Cinemachine will follow this target
-                cinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + cameraAngleOverride, cinemachineTargetYaw, 0.0f);
+                cinemachineCameraTarget.rotation = Quaternion.Euler(cinemachineTargetPitch + cameraAngleOverride, cinemachineTargetYaw, 0.0f);
 
                 // Delayed character rotation if not in animation or wheelchair
                 if (lookTimeoutDelta < 0 && !inAnimation && !onWheelchair)
@@ -966,7 +967,7 @@ namespace UserBehaviour
                     rotationVelocity = currentLook.x * Time.deltaTime * rotationSpeed;
 
                     cinemachineTargetPitch = ClampAngle(cinemachineTargetPitch, -topClamp, bottomClamp);
-                    cinemachineCameraTarget.transform.localRotation = Quaternion.Euler(cinemachineTargetPitch, 0f, 0f);
+                    cinemachineCameraTarget.localRotation = Quaternion.Euler(cinemachineTargetPitch, 0f, 0f);
 
                     transform.Rotate(Vector3.up * rotationVelocity);
                 }
@@ -1096,6 +1097,7 @@ namespace UserBehaviour
         {
             yield return null;
             activeCam = cinemachineBrain.ActiveVirtualCamera as CinemachineVirtualCamera;
+            cinemachineCameraTarget = activeCam.Follow;
             originalFov = activeCam.m_Lens.FieldOfView;
             camNoise = activeCam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
             camTPF = activeCam.GetCinemachineComponent<Cinemachine3rdPersonFollow>();
