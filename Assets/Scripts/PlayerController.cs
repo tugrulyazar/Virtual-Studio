@@ -524,6 +524,9 @@ namespace UserBehaviour
             inAnimation = true;
             grounded = false;
 
+            // Suspend flight toggle input
+            input.Player.ToggleFlight.Disable();
+
             // Change collision filter
             camTPF.CameraCollisionFilter = flyingLayermask;
 
@@ -559,6 +562,9 @@ namespace UserBehaviour
 
             // Set state
             inAnimation = false;
+
+            // Resume flight toggle input
+            input.Player.ToggleFlight.Enable();
         }
 
         private IEnumerator EndFlight()
