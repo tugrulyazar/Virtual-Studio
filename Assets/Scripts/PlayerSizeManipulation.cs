@@ -47,12 +47,12 @@ namespace UserBehaviour
 
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.PageUp) && !microSize && !inScaleCoroutine)
+            if (Input.GetKeyDown(KeyCode.PageUp) && !microSize && !inScaleCoroutine && !playerController.inAnimation)
             {
                 superSizePlayer(superSizeScale);
             }
 
-            if (Input.GetKeyDown(KeyCode.PageDown) && !superSize && !inScaleCoroutine)
+            if (Input.GetKeyDown(KeyCode.PageDown) && !superSize && !inScaleCoroutine && !playerController.inAnimation)
             {
                 microSizePlayer(microSizeScale);
             }
@@ -143,7 +143,7 @@ namespace UserBehaviour
                 playerController.targetDistance /= 2f;
 
                 // Adjust raycast distance
-                playerController.raycastDistance /= scale;
+                playerController.raycastDistance /= raycastDistance;
 
                 // Reset step offset
                 characterController.stepOffset = stepOffset;
@@ -234,6 +234,7 @@ namespace UserBehaviour
         {
             // Enter state
             inScaleCoroutine = true;
+            playerController.inAnimation = true;
 
             // Get current cam properties
             Vector3 playerScale = playerCharacter.transform.localScale;
@@ -261,6 +262,7 @@ namespace UserBehaviour
 
             // Exit state
             inScaleCoroutine = false;
+            playerController.inAnimation = false;
         }
     }
 }

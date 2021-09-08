@@ -248,12 +248,11 @@ namespace UserBehaviour
 
         // States
         [HideInInspector] public bool grounded;
-
+        [HideInInspector] public bool inAnimation;
         private bool isFlying;
         private bool isSitting;
         private bool onWheelchair;
         private bool inRotation;
-        private bool inAnimation;
         private bool inStaticAnimation;
         private bool inLoopAnimation;
         private bool isTargetValid;
