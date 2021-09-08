@@ -19,14 +19,10 @@ namespace UserBehaviour
             playerController = GetComponent<PlayerController>();
         }
 
-        private void Start()
+        private void Update()
         {
             groundedOffset = playerController.groundedOffset;
             groundedRadius = playerController.groundedRadius;
-        }
-
-        private void Update()
-        {
             grounded = playerController.grounded;
         }
 

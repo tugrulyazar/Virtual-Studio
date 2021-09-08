@@ -18,6 +18,7 @@ namespace UserBehaviour
         // States
         private bool superSize;
         private bool microSize;
+        private bool sizeAdjusted;
         private bool inScaleCoroutine;
 
         // Scale factor
@@ -31,6 +32,8 @@ namespace UserBehaviour
         private float distanceToGround;
         private float stepOffset;
         private float raycastDistance;
+        private float gravity;
+        private float targetDistance;
 
         private void Start()
         {
@@ -43,29 +46,58 @@ namespace UserBehaviour
             distanceToGround = ikFootPlacement.distanceToGround;
             stepOffset = characterController.stepOffset;
             raycastDistance = playerController.raycastDistance;
+            gravity = playerController.gravity;
+            targetDistance = playerController.targetDistance;
         }
 
         void Update()
         {
             if (Input.GetKeyDown(KeyCode.PageUp) && !microSize && !inScaleCoroutine && !playerController.inAnimation)
             {
-                superSizePlayer(superSizeScale);
+                if (!superSize)
+                {
+                    superSize = true;
+                    adjustPlayerSize(superSizeScale);
+                }
+                else if (superSize)
+                {
+                    superSize = false;
+                    adjustPlayerSize(superSizeScale);
+                }
             }
 
             if (Input.GetKeyDown(KeyCode.PageDown) && !superSize && !inScaleCoroutine && !playerController.inAnimation)
             {
-                microSizePlayer(microSizeScale);
+                if (!microSize)
+                {
+                    microSize = true;
+                    adjustPlayerSize(microSizeScale);
+                }
+                else if (microSize)
+                {
+                    microSize = false;
+                    adjustPlayerSize(microSizeScale);
+                }
             }
         }
 
-        private void superSizePlayer(float scale)
+        private void adjustPlayerSize(float scale)
         {
-            if (!superSize)
+            if (!sizeAdjusted)
             {
-                superSize = true;
+                // Set state
+                sizeAdjusted = true;
 
                 // Set grounded props
-                playerController.groundedOffset *= 1f;
+                if (superSize)
+                {
+                    playerController.groundedOffset = -1f;
+                }
+                else if (microSize)
+                {
+                    playerController.groundedOffset = -0.01f;
+                }
+                
                 playerController.groundedRadius *= scale;
 
                 // Set IK distance
@@ -85,7 +117,15 @@ namespace UserBehaviour
                 playerController.flyJumpHeight *= scale;
                 playerController.flySpeed *= scale;
                 playerController.fastFlySpeed *= scale;
-                playerController.gravity *= 3;
+
+                if (superSize)
+                {
+                    playerController.gravity *= 3f;
+                }
+                else if (microSize)
+                {
+                    playerController.gravity *= scale;
+                }
 
                 // Adjust camera properties
                 playerController.minZoomOffset *= scale;
@@ -99,14 +139,27 @@ namespace UserBehaviour
                 playerController.targetDistance *= scale;
 
                 // Adjust raycast distance
-                playerController.raycastDistance *= scale;
+                if (superSize)
+                {
+                    playerController.raycastDistance *= scale;
+                }
+                
 
                 // Adjust step offset
-                characterController.stepOffset = 1.5f;
+                if (superSize)
+                {
+                    characterController.stepOffset = 1.7f;
+                }
+                else if (microSize)
+                {
+                    characterController.stepOffset *= scale;
+                }
+                
             }
-            else if (superSize)
+            else if (sizeAdjusted)
             {
-                superSize = false;
+                // Exit state
+                sizeAdjusted = false;
 
                 // Reset grounded props
                 playerController.groundedOffset = groundedOffset;
@@ -118,10 +171,10 @@ namespace UserBehaviour
                 // Get cam TPF
                 camTPF = playerController.camTPF;
 
-                // Adjust scale
+                // Reset scale
                 StartCoroutine(scaleCoroutine(1f / scale));
 
-                // Adjust movement
+                // Reset movement
                 playerController.animSpeedMultiplier *= scale;
                 playerController.moveSpeed /= scale;
                 playerController.sprintSpeed /= scale;
@@ -129,9 +182,9 @@ namespace UserBehaviour
                 playerController.flyJumpHeight /= scale;
                 playerController.flySpeed /= scale;
                 playerController.fastFlySpeed /= scale;
-                playerController.gravity /= 3;
+                playerController.gravity = gravity;
 
-                // Adjust camera properties
+                // Reset camera properties
                 playerController.minZoomOffset /= scale;
                 playerController.maxZoomOffset /= scale;
                 playerController.zoomOffset /= scale;
@@ -140,90 +193,10 @@ namespace UserBehaviour
                 playerController.cameraDistance /= scale;
 
                 // Adjust targeting distance
-                playerController.targetDistance /= 2f;
+                playerController.targetDistance = targetDistance;
 
                 // Adjust raycast distance
-                playerController.raycastDistance /= raycastDistance;
-
-                // Reset step offset
-                characterController.stepOffset = stepOffset;
-            }
-        }
-
-        private void microSizePlayer(float scale)
-        {
-            if (!microSize)
-            {
-                microSize = true;
-
-                // Set grounded props
-                playerController.groundedOffset = 0.005f;
-                playerController.groundedRadius *= scale;
-
-                // Zero IK distance
-                ikFootPlacement.distanceToGround *= scale;
-
-                // Get cam TPF
-                camTPF = playerController.camTPF;
-
-                // Adjust scale
-                StartCoroutine(scaleCoroutine(scale));
-
-                // Adjust movement
-                playerController.animSpeedMultiplier /= scale;
-                playerController.moveSpeed *= scale;
-                playerController.sprintSpeed *= scale;
-                playerController.jumpHeight *= scale;
-                playerController.flyJumpHeight *= scale;
-                playerController.flySpeed *= scale;
-                playerController.fastFlySpeed *= scale;
-                playerController.gravity *= scale;
-
-                // Adjust camera properties
-                playerController.minZoomOffset *= scale;
-                playerController.maxZoomOffset *= scale;
-                playerController.zoomOffset *= scale;
-                playerController.zoomDistance *= scale;
-                playerController.originalDistance *= scale;
-                playerController.cameraDistance *= scale;
-
-                // Adjust step offset
-                characterController.stepOffset *= scale;
-            }
-            else if (microSize)
-            {
-                microSize = false;
-
-                // Reset grounded props
-                playerController.groundedOffset = groundedOffset;
-                playerController.groundedRadius = groundedRadius;
-
-                // Reset IK distance
-                ikFootPlacement.distanceToGround = distanceToGround;
-
-                // Get cam TPF
-                camTPF = playerController.camTPF;
-
-                // Adjust scale
-                StartCoroutine(scaleCoroutine(1f / scale));
-
-                // Adjust movement
-                playerController.animSpeedMultiplier *= scale;
-                playerController.moveSpeed /= scale;
-                playerController.sprintSpeed /= scale;
-                playerController.jumpHeight /= scale;
-                playerController.flyJumpHeight /= scale;
-                playerController.flySpeed /= scale;
-                playerController.fastFlySpeed /= scale;
-                playerController.gravity /= scale;
-
-                // Adjust camera properties
-                playerController.minZoomOffset /= scale;
-                playerController.maxZoomOffset /= scale;
-                playerController.zoomOffset /= scale;
-                playerController.zoomDistance /= scale;
-                playerController.originalDistance /= scale;
-                playerController.cameraDistance /= scale;
+                playerController.raycastDistance = raycastDistance;
 
                 // Reset step offset
                 characterController.stepOffset = stepOffset;

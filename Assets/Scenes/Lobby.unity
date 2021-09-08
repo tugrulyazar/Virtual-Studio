@@ -7227,6 +7227,7 @@ MonoBehaviour:
   zoomDistance: 0
   zoomOffset: 0
   grounded: 0
+  inAnimation: 0
 --- !u!1 &5166924442857309514
 GameObject:
   m_ObjectHideFlags: 0
