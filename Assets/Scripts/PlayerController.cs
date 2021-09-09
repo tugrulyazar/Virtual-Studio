@@ -143,7 +143,7 @@ namespace UserBehaviour
         private int animIDturnRight;
 
         // Input system
-        private PlayerInput input;
+        [HideInInspector] public PlayerInput input;
 
         private Vector2 currentMovement;
         private int currentMovementDir;
