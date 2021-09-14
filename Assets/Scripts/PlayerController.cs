@@ -144,7 +144,6 @@ namespace UserBehaviour
 
         // Input system
         [HideInInspector] public PlayerInput input;
-
         private Vector2 currentMovement;
         private int currentMovementDir;
         private Vector2 currentLook;
@@ -178,6 +177,15 @@ namespace UserBehaviour
 
         // Character controller
         private CharacterController controller;
+
+        // Character controller limits
+        private float walkSlopeMax = 45f;
+        private float walkStepMax = 0.25f;
+        private float wheelchairStepMax = 0.03f;
+        private float wheelchairSlopeMax = 20f; // Wheelchair max slope in degrees
+
+        [HideInInspector] public float slopeAngle = 0f;
+        private float wheelchairSlopeLimit = 10f; // Wheelchair slope limit in percent, slows down between limit and max
 
         // Cinemachine
         private Transform mainCamera;
@@ -246,7 +254,6 @@ namespace UserBehaviour
         private const float speedOffset = 0.1f;
         private const float smoothTime = 1f;
         private const float smoothCount = smoothTime * 60;
-
 
         // States
         [HideInInspector] public bool grounded;
@@ -435,6 +442,12 @@ namespace UserBehaviour
         {
             // Set target speed based on move speed, sprint speed and if sprint is pressed
             targetSpeed = runPressed ? sprintSpeed : moveSpeed;
+
+            // Slow down character if wheelchair slope limit is reached
+            if (onWheelchair && slopeAngle > wheelchairSlopeLimit)
+            {
+                targetSpeed /= 5f;
+            }
 
             // If there is no input, set the target speed to 0
             if (currentMovement == Vector2.zero) targetSpeed = 0.0f;
@@ -1425,8 +1438,10 @@ namespace UserBehaviour
             DisableCamToggle();
             input.Player.Run.Disable();
             animator.SetBool(animIDonWheelchair, true);
-            controller.slopeLimit = 9.5f;
-            controller.stepOffset = 0.03f;
+
+            // Set wheelchair controller limits
+            controller.slopeLimit = wheelchairSlopeMax;
+            controller.stepOffset = wheelchairStepMax;
 
             wheelchair.SetActive(true);
 
@@ -1448,8 +1463,8 @@ namespace UserBehaviour
             EnableCamToggle();
             input.Player.Run.Enable();
             animator.SetBool(animIDonWheelchair, false);
-            controller.slopeLimit = 45f;
-            controller.stepOffset = 0.25f;
+            controller.slopeLimit = walkSlopeMax;
+            controller.stepOffset = walkStepMax;
 
             wheelchair.SetActive(false);
 
