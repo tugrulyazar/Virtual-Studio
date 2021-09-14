@@ -1349,7 +1349,7 @@ namespace UserBehaviour
                 // Dance animation loop start
                 if (grounded && !onWheelchair && dancePressed)
                 {
-                    StartLoopAnimation(animIDisDancing);
+                    StartCoroutine(StartLoopAnimation(animIDisDancing));
                 }
 
                 if (grounded && !onWheelchair && cameraMode != 1 && Input.GetKeyDown(KeyCode.L))
@@ -1364,13 +1364,14 @@ namespace UserBehaviour
             }
             else
             {
-                // Stop loop animations
+                // Stop animations
                 // Dance animation loop stop
                 if (inLoopAnimation && danceReleased)
                 {
                     StartCoroutine(EndLoopAnimation(animIDisDancing));
                 }
 
+                // Sit exit after delay
                 if (sitDelayed && sitPressed)
                 {
                     StartCoroutine(SitExit());
@@ -1492,23 +1493,24 @@ namespace UserBehaviour
             }
         }
 
-        private void StartLoopAnimation(int animID)
+        private IEnumerator StartLoopAnimation(int animID)
         {
+            inLoopAnimation = true;
             inAnimation = true;
             inStaticAnimation = true;
-            inLoopAnimation = true;
             MovementDisable();
             animator.SetBool(animID, true);
+            yield return null;
         }
 
         private IEnumerator EndLoopAnimation(int animID)
         {
+            inLoopAnimation = false;
             animator.SetBool(animID, false);
-            yield return new WaitForSeconds(3.5f);
-            MovementEnable();
+            yield return new WaitForSeconds(4f);
             inAnimation = false;
             inStaticAnimation = false;
-            inLoopAnimation = false;
+            MovementEnable();
         }
 
         private void MovementDisable()
