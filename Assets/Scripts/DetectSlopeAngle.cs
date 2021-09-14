@@ -1,36 +1,33 @@
 using UnityEngine;
 using TMPro;
 
-namespace UserBehaviour
+public class DetectSlopeAngle : MonoBehaviour
 {
-    public class DetectSlopeAngle : MonoBehaviour
+    [SerializeField]
+    private TextMeshProUGUI angleText;
+
+    private UserBehaviour.PlayerController playerController;
+
+    private float slopeAngle;
+    private float slopePercent;
+    private string angleToString;
+
+    private void Start()
     {
-        [SerializeField]
-        private TextMeshProUGUI angleText;
+        playerController = GetComponent<UserBehaviour.PlayerController>();
+    }
+    private void Update()
+    {
+        slopePercent = Mathf.Round((slopeAngle / 90f) * 100);
+        playerController.slopeAngle = slopePercent;
 
-        private PlayerController playerController;
+        angleToString = slopePercent.ToString();
+        angleText.text = "%" + angleToString;
+    }
 
-        private float slopeAngle;
-        private float slopePercent;
-        private string angleToString;
-
-        private void Start()
-        {
-            playerController = GetComponent<PlayerController>();
-        }
-        private void Update()
-        {
-            slopePercent = Mathf.Round((slopeAngle / 90f) * 100);
-            playerController.slopeAngle = slopePercent;
-
-            angleToString = slopePercent.ToString();
-            angleText.text = "%" + angleToString;
-        }
-
-        private void OnControllerColliderHit(ControllerColliderHit hit)
-        {
-            slopeAngle = Vector3.Angle(Vector3.up, hit.normal);
-        }
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        slopeAngle = Vector3.Angle(Vector3.up, hit.normal);
     }
 }
 

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using Cinemachine;
 
-public class CameraController : MonoBehaviour
+namespace UserBehaviour
+{
+   public class CameraController : MonoBehaviour
 {
     // Start is called before the first frame update
     void Start()
@@ -16,4 +18,5 @@ public class CameraController : MonoBehaviour
     {
         
     }
+} 
 }

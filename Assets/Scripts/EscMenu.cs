@@ -1,59 +1,35 @@
 using UnityEngine;
 
-namespace UserBehaviour
+public class EscMenu : MonoBehaviour
 {
-    public class EscMenu : MonoBehaviour
+    [SerializeField]
+    private UIManager ui;
+    [SerializeField]
+    private UserBehaviour.PlayerController playerController;
+    [SerializeField]
+    private GameObject escMenu;
+
+    void Update()
     {
-        [SerializeField]
-        private PlayerController playerController;
-        [SerializeField]
-        private GameObject escMenu;
-
-        private bool menuActive;
-
-        void Update()
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (!ui.menuActive)
             {
-                if (!menuActive)
-                {
-                    activateMenu();
-                }
-                else                
-                {
-                    deactivateMenu();
-                }
-
+                ui.activateMenu();
+                escMenu.SetActive(true);
             }
-        }
+            else if (escMenu.activeSelf)
+            {
+                ui.deactivateMenu();
+                escMenu.SetActive(false);
+            }
 
-        private void activateMenu()
-        {
-            menuActive = true;
-            playerController.input.Disable();
-
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.Confined;
-
-            escMenu.SetActive(true);
-        }
-
-        private void deactivateMenu()
-        {
-            menuActive = false;
-            playerController.input.Enable();
-
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
-
-            escMenu.SetActive(false);
-        }
-
-        public void exitGame()
-        {
-            Application.Quit();
-            Debug.Log("Exit Game");
         }
     }
-}
 
+    public void exitGame()
+    {
+        Application.Quit();
+        Debug.Log("Exit Game");
+    }
+}
