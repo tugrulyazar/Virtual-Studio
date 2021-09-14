@@ -3,7 +3,7 @@ using UnityEngine;
 public class RainBehaviour : MonoBehaviour
 {
     private float groundDisappearTime = 3f;
-    private float modelDisappearTime = 10f;
+    private float modelDisappearTime = 20f;
 
     private void OnCollisionEnter(Collision collision)
     {

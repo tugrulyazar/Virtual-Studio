@@ -31,9 +31,9 @@ public class RainManager : MonoBehaviour
     {
         while (isRaining)
         {
-            Vector3 pos = new Vector3(Random.Range(-xRange, xRange), height, Random.Range(-zRange, zRange));
+            Vector3 pos = new Vector3(Random.Range(0f, xRange), height, Random.Range(-zRange, 0f));
             Instantiate(rainObject, pos, Quaternion.identity, gameObject.transform);
-            yield return new WaitForSeconds(0.01f);
+            yield return new WaitForSeconds(0.005f);
         }
         yield return null;
     }
