@@ -9,6 +9,7 @@ public class RainManager : MonoBehaviour
     private bool isRaining;
     private float xRange = 10f;
     private float zRange = 10f;
+    private float height = 20f;
 
     void Update()
     {
@@ -30,7 +31,7 @@ public class RainManager : MonoBehaviour
     {
         while (isRaining)
         {
-            Vector3 pos = new Vector3(Random.Range(-xRange, xRange), 15f, Random.Range(-zRange, zRange));
+            Vector3 pos = new Vector3(Random.Range(-xRange, xRange), height, Random.Range(-zRange, zRange));
             Instantiate(rainObject, pos, Quaternion.identity, gameObject.transform);
             yield return new WaitForSeconds(0.01f);
         }
